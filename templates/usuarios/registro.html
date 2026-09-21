@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Crear cuenta - ISTAM Admisión{% endblock %}
+
+{% block body_class %}reg-solo{% endblock %}
+{% block nav %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block chat %}{% endblock %}
+
+{% block content %}
+<div class="reg-wrap">
+    <div class="reg-card">
+              <div class="reg-marca">
+            <img src="{% static 'img/logotipo.jpg' %}" alt="Logo ISTAM" class="reg-logo">
+            <strong>Instituto Superior Tecnológico Amazónico</strong>
+        </div>
+
+        <div class="reg-titulo">
+            <span></span>
+            <h1>Crear cuenta</h1>
+            <span></span>
+        </div>
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="alerta-form">
+                    {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="reg-grid">
+                {% for field in form %}
+                    <div class="reg-campo">
+                        {{ field.label_tag }}
+                        {{ field }}
+                        {% for error in field.errors %}
+                            <div class="reg-error">{{ error }}</div>
+                        {% endfor %}
+                        {% if field.help_text and field.name != 'password1' and field.name != 'password2' %}
+                            <div class="reg-ayuda">{{ field.help_text|safe }}</div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="reg-reglas">{{ form.password1.help_text|safe }}</div>
+
+            <button type="submit" class="reg-boton">Crear cuenta</button>
+        </form>
+
+        <p class="reg-pie">¿Ya tienes cuenta? <a href="{% url 'login' %}">Inicia sesión</a></p>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends 'panel/base_panel.html' %}
+{% block title %}Exámenes - Panel administrativo{% endblock %}
+
+{% block panel_content %}
+    <div class="panel-topbar">
+        <div>
+            <h1>Exámenes</h1>
+            <span class="panel-topbar-subtitulo">Fechas y sedes de evaluación del proceso de admisión.</span>
+        </div>
+        <a href="{% url 'panel:examen_crear' %}" class="btn">+ Nuevo examen</a>
+    </div>
+
+    <div class="panel-tabla-card">
+        {% if examenes %}
+            <table class="tabla-postulantes">
+                <thead>
+                    <tr>
+                        <th>Examen</th>
+                        <th>Fecha</th>
+                        <th>Hora</th>
+                        <th>Lugar</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for examen in examenes %}
+                        <tr>
+                            <td><a href="{% url 'panel:examen_editar' examen.id %}" class="fila-link">{{ examen.nombre }}</a></td>
+                            <td><a href="{% url 'panel:examen_editar' examen.id %}" class="fila-link">{{ examen.fecha|date:"d M Y" }}</a></td>
+                            <td><a href="{% url 'panel:examen_editar' examen.id %}" class="fila-link">{{ examen.hora|time:"H:i" }}</a></td>
+                            <td><a href="{% url 'panel:examen_editar' examen.id %}" class="fila-link">{{ examen.lugar }}</a></td>
+                            <td><a href="{% url 'panel:examen_editar' examen.id %}" class="fila-link">→</a></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="sin-resultados">Todavía no hay exámenes programados.</div>
+        {% endif %}
+    </div>
+{% endblock %}

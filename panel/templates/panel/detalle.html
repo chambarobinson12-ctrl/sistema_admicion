@@ -1,0 +1,204 @@
+{% extends 'panel/base_panel.html' %}
+{% block title %}{{ inscripcion.postulante.nombre_completo }} - Panel administrativo{% endblock %}
+
+{% block panel_content %}
+    <div class="panel-breadcrumb">
+        <a href="{% url 'panel:dashboard' %}">← Postulantes</a>
+        <span>/</span>
+        <span class="actual">{{ inscripcion.postulante.nombre_completo }}</span>
+    </div>
+
+    <div class="tarjeta panel-header-postulante">
+        {% if inscripcion.postulante.foto %}
+            <a href="{{ inscripcion.postulante.foto.url }}" target="_blank" rel="noopener" title="Ver foto del postulante">
+                <img src="{{ inscripcion.postulante.foto.url }}" alt="Foto de {{ inscripcion.postulante.nombre_completo }}" class="avatar-circulo" style="object-fit:cover;">
+            </a>
+        {% else %}
+            <div class="avatar-circulo">{{ inscripcion.postulante.iniciales }}</div>
+        {% endif %}
+        <div class="panel-header-postulante-info">
+            <h2>
+                {{ inscripcion.postulante.nombre_completo }}
+                <span class="badge
+                    {% if inscripcion.estado == 'aprobada' %}badge-exito
+                    {% elif inscripcion.estado == 'rechazada' %}badge-peligro
+                    {% elif inscripcion.estado == 'en_revision' %}badge-primario
+                    {% else %}badge-alerta{% endif %}">
+                    {{ inscripcion.get_estado_display }}
+                </span>
+            </h2>
+            <span class="panel-header-postulante-meta">CI {{ inscripcion.postulante.usuario.cedula|default:"—" }} · {{ inscripcion.carrera.nombre }} · {{ inscripcion.convocatoria.nombre }}</span>
+        </div>
+        <div class="panel-numero-postulacion">
+            <span class="etiqueta">N.° de postulación</span>
+            <span class="numero">{{ inscripcion.numero_postulacion }}</span>
+            <span class="etiqueta">Postuló el {{ inscripcion.fecha_inscripcion|date:"d M Y" }}</span>
+        </div>
+    </div>
+
+    <div class="panel-dos-columnas">
+        <div style="display:flex; flex-direction:column; gap:20px;">
+            <div class="tarjeta">
+                <span class="tarjeta-titulo">Datos del postulante</span>
+                <div class="datos-lista">
+                    <div class="datos-item">
+                        <span class="datos-item-icono">📅</span>
+                        <span class="datos-item-texto">
+                            <span class="datos-item-etiqueta">Fecha de nacimiento · Género</span>
+                            <span class="datos-item-valor">{{ inscripcion.postulante.fecha_nacimiento|date:"d M Y" }} · {{ inscripcion.postulante.get_genero_display|default:"No especificado" }}</span>
+                        </span>
+                    </div>
+                    <div class="datos-item">
+                        <span class="datos-item-icono">📞</span>
+                        <span class="datos-item-texto">
+                            <span class="datos-item-etiqueta">Teléfono</span>
+                            <span class="datos-item-valor">{{ inscripcion.postulante.usuario.telefono|default:"No registrado" }}</span>
+                        </span>
+                    </div>
+                    <div class="datos-item">
+                        <span class="datos-item-icono">✉️</span>
+                        <span class="datos-item-texto">
+                            <span class="datos-item-etiqueta">Correo electrónico</span>
+                            <span class="datos-item-valor">{{ inscripcion.postulante.usuario.email|default:"No registrado" }}</span>
+                        </span>
+                    </div>
+                    <div class="datos-item">
+                        <span class="datos-item-icono">📍</span>
+                        <span class="datos-item-texto">
+                            <span class="datos-item-etiqueta">Dirección</span>
+                            <span class="datos-item-valor">{{ inscripcion.postulante.direccion|default:"No registrada" }}</span>
+                        </span>
+                    </div>
+                    <div class="datos-item">
+                        <span class="datos-item-icono">🏫</span>
+                        <span class="datos-item-texto">
+                            <span class="datos-item-etiqueta">Colegio de procedencia</span>
+                            <span class="datos-item-valor">{{ inscripcion.postulante.colegio_procedencia|default:"No registrado" }}</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tarjeta">
+                <span class="tarjeta-titulo">Resultado de examen</span>
+                {% if resultado %}
+                    <div style="display:flex; flex-direction:column; gap:4px; margin-bottom:10px;">
+                        <span style="font-size:13.5px; font-weight:600;">{{ resultado.examen.nombre }}</span>
+                        <span style="font-size:12.5px; color:var(--texto-muted);">{{ resultado.examen.fecha|date:"d M Y" }}, {{ resultado.examen.hora|time:"H:i" }} · {{ resultado.examen.lugar }}</span>
+                    </div>
+                    <div class="examen-resultado">
+                        <span style="font-size:12.5px; color:var(--texto-muted); font-weight:600;">Puntaje</span>
+                        <span class="badge {% if resultado.aprobado %}badge-exito{% else %}badge-peligro{% endif %}">{{ resultado.puntaje }} · {% if resultado.aprobado %}Aprobado{% else %}No aprobado{% endif %}</span>
+                    </div>
+                {% else %}
+                    <div class="examen-resultado" style="border-top:none; margin-top:0; padding-top:0;">
+                        <span style="font-size:12.5px; color:var(--texto-muted); font-weight:600;">Puntaje</span>
+                        <span class="badge badge-neutro">Pendiente de rendir</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="tarjeta">
+            <div class="tarjeta-subtitulo-fila">
+                <span style="font-size:15px; font-weight:800;">Documentos</span>
+                <span style="display:flex; align-items:center; gap:12px;">
+                    <span style="font-size:12.5px; color:var(--texto-muted); font-weight:600;">{{ docs_validados }} de {{ total_docs }} validados</span>
+                    {% if inscripcion.documentos.exists %}
+                        <button type="button" class="link-ver-doc" onclick="document.querySelector('.ver-doc').click();">👁 Ver todos</button>
+                        <a href="{% url 'panel:descargar_documentos' inscripcion.id %}" class="link-ver-doc">⬇ Descargar todos</a>
+                    {% endif %}
+                </span>
+            </div>
+
+            <div class="documentos-lista">
+                {% for item in docs_detalle %}
+                    {% with doc=item.documento %}
+                        {% if not doc %}
+                            <div class="doc-card doc-vacio">
+                                <span class="doc-icono">📄</span>
+                                <span class="doc-info">
+                                    <span class="doc-titulo" style="color:var(--texto-muted);">{{ item.etiqueta }}</span>
+                                    <span class="doc-meta">Esperando que el postulante lo cargue</span>
+                                </span>
+                                <span class="badge badge-neutro">No cargado</span>
+                            </div>
+                        {% elif doc.estado == 'validado' %}
+                            <div class="doc-card doc-validado">
+                                <span class="doc-icono">✅</span>
+                                    {% if item.es_imagen %}<img src="{{ doc.archivo.url }}" alt="{{ item.etiqueta }}" title="Ver {{ item.etiqueta|lower }}" onclick="this.parentElement.querySelector('.ver-doc').click();" style="width:56px; height:56px; object-fit:cover; border-radius:8px; border:1px solid var(--borde); cursor:zoom-in; flex-shrink:0;">{% endif %}
+                                <span class="doc-info">
+                                    <span class="doc-titulo">{{ item.etiqueta }}</span>
+                                    <span class="doc-meta">{% include 'panel/_boton_doc.html' with doc=doc etiqueta=item.etiqueta inscripcion=inscripcion clase='link-ver-doc' texto='👁 Ver documento' %} · cargado {{ doc.fecha_subida|date:"d M Y" }}</span>
+                                </span>
+                                <span class="badge badge-exito">Validado</span>
+                            </div>
+                        {% elif doc.estado == 'rechazado' %}
+                            <div class="doc-card doc-rechazado">
+                                <div class="doc-fila">
+                                    <span class="doc-icono">⚠️</span>
+                                    {% if item.es_imagen %}<img src="{{ doc.archivo.url }}" alt="{{ item.etiqueta }}" title="Ver {{ item.etiqueta|lower }}" onclick="this.parentElement.querySelector('.ver-doc').click();" style="width:56px; height:56px; object-fit:cover; border-radius:8px; border:1px solid var(--borde); cursor:zoom-in; flex-shrink:0;">{% endif %}
+                                    <span class="doc-info">
+                                        <span class="doc-titulo">{{ item.etiqueta }}</span>
+                                        <span class="doc-meta">{% include 'panel/_boton_doc.html' with doc=doc etiqueta=item.etiqueta inscripcion=inscripcion clase='link-ver-doc' texto='👁 Ver documento' %} · cargado {{ doc.fecha_subida|date:"d M Y" }}</span>
+                                        {% if doc.observaciones %}<span class="doc-observacion">Motivo: {{ doc.observaciones }}</span>{% endif %}
+                                    </span>
+                                    <span class="badge badge-peligro">Rechazado</span>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="doc-card doc-pendiente">
+                                <div class="doc-fila">
+                                    <span class="doc-icono">⏳</span>
+                                    {% if item.es_imagen %}<img src="{{ doc.archivo.url }}" alt="{{ item.etiqueta }}" title="Ver {{ item.etiqueta|lower }}" onclick="this.parentElement.querySelector('.ver-doc').click();" style="width:56px; height:56px; object-fit:cover; border-radius:8px; border:1px solid var(--borde); cursor:zoom-in; flex-shrink:0;">{% endif %}
+                                    <span class="doc-info">
+                                        <span class="doc-titulo">{{ item.etiqueta }}</span>
+                                        <span class="doc-meta">{% include 'panel/_boton_doc.html' with doc=doc etiqueta=item.etiqueta inscripcion=inscripcion clase='link-ver-doc' texto='👁 Ver documento' %} · cargado {{ doc.fecha_subida|date:"d M Y" }}</span>
+                                    </span>
+                                    <span class="badge badge-alerta">Pendiente de revisión</span>
+                                </div>
+                                <form method="post" action="{% url 'panel:validar_documento' doc.id %}">
+                                    {% csrf_token %}
+                                    <textarea name="observaciones" class="doc-observaciones-input" placeholder="Agregar una observación (opcional)"></textarea>
+                                    <div class="doc-acciones">
+                                        <button type="submit" name="accion" value="aprobar" class="btn-sm btn-exito">Aprobar</button>
+                                        <button type="submit" name="accion" value="rechazar" class="btn-sm btn-peligro-outline">Rechazar</button>
+                                    </div>
+                                </form>
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {% if docs_anteriores %}
+        <div class="tarjeta">
+            <span class="tarjeta-titulo">Documentos anteriores</span>
+            <p class="campo-ayuda" style="margin:0 0 10px;">Documentos que el postulante subió cuando se pedían otros requisitos. Se conservan para consulta.</p>
+            <div style="display:flex; flex-wrap:wrap; gap:14px;">
+                {% for doc in docs_anteriores %}
+                    <span class="doc-meta">{% include 'panel/_boton_doc.html' with doc=doc etiqueta=doc.get_tipo_display inscripcion=inscripcion clase='link-ver-doc' texto=doc.get_tipo_display %}</span>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="panel-accion-final">
+        <p>Todos los documentos deben estar validados para aprobar la postulación completa.</p>
+        <form method="post" action="{% url 'panel:decidir_inscripcion' inscripcion.id %}" class="acciones">
+            {% csrf_token %}
+            {% if inscripcion.estado != 'aprobada' and inscripcion.estado != 'rechazada' %}
+                <button type="submit" name="accion" value="rechazar" class="btn-secundario">Rechazar postulación</button>
+                <button type="submit" name="accion" value="aprobar" {% if not todos_validados %}disabled{% endif %}>Aprobar postulación completa</button>
+            {% else %}
+                <span class="badge {% if inscripcion.estado == 'aprobada' %}badge-exito{% else %}badge-peligro{% endif %}">
+                    Postulación {{ inscripcion.get_estado_display|lower }}
+                </span>
+                <a href="{% url 'panel:estados_postulantes' %}?q={{ inscripcion.numero_postulacion }}&proceso={{ inscripcion.convocatoria_id }}" class="btn-sm btn-secundario">Revisar y comentar</a>
+            {% endif %}
+        </form>
+    </div>
+    {% include 'panel/_visor_documentos.html' %}
+{% endblock %}

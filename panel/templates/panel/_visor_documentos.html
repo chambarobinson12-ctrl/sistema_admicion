@@ -1,0 +1,181 @@
+{% comment %}
+Visor emergente de documentos. Cualquier botón con la clase "ver-doc" y los
+atributos data-* de abajo lo abre. Permite ver el archivo dentro de la misma
+página, aprobarlo o rechazarlo, y pasar al siguiente con las flechas.
+{% endcomment %}
+<div id="visor-doc" class="visor-overlay hidden" aria-hidden="true">
+    <div class="visor-ventana" role="dialog" aria-modal="true" aria-labelledby="visor-titulo">
+        <div class="visor-cabecera">
+            <div class="visor-cabecera-texto">
+                <strong id="visor-titulo">Documento</strong>
+                <span id="visor-subtitulo"></span>
+            </div>
+            <div class="visor-cabecera-acciones">
+                <span id="visor-contador" class="visor-contador"></span>
+                <button type="button" class="visor-btn-icono" id="visor-anterior" title="Documento anterior (←)">‹</button>
+                <button type="button" class="visor-btn-icono" id="visor-siguiente" title="Documento siguiente (→)">›</button>
+                <button type="button" class="visor-btn-icono" id="visor-tamano" title="Ventana grande / pequeña">⤢</button>
+                <button type="button" class="visor-btn-icono visor-cerrar" id="visor-cerrar" title="Cerrar (Esc)">&times;</button>
+            </div>
+        </div>
+        <div class="visor-cuerpo">
+            <div class="visor-vista" id="visor-vista"></div>
+            <aside class="visor-lateral">
+                <div class="visor-dato">
+                    <span class="visor-etiqueta">Postulante</span>
+                    <span id="visor-postulante" class="visor-valor"></span>
+                    <span id="visor-numero" class="visor-meta"></span>
+                </div>
+                <div class="visor-dato">
+                    <span class="visor-etiqueta">Estado actual</span>
+                    <span id="visor-estado" class="badge"></span>
+                    <span id="visor-obs" class="doc-observacion" style="display:none;"></span>
+                </div>
+                <form method="post" id="visor-form" class="visor-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <label for="visor-observaciones">Observación (se envía al postulante si lo rechazas)</label>
+                    <textarea name="observaciones" id="visor-observaciones" class="doc-observaciones-input" placeholder="Ej. La foto de la cédula está borrosa"></textarea>
+                    <div class="doc-acciones">
+                        <button type="submit" name="accion" value="aprobar" class="btn-sm btn-exito">✓ Aprobar</button>
+                        <button type="submit" name="accion" value="rechazar" class="btn-sm btn-peligro-outline">✕ Rechazar</button>
+                    </div>
+                </form>
+                <a id="visor-descargar" href="#" class="btn-sm btn-secundario" style="display:block; text-align:center; margin-top:12px;">⬇ Descargar documento</a>
+                <div class="visor-enlaces">
+                    <a id="visor-abrir" href="#" target="_blank" rel="noopener">Abrir en pestaña nueva ↗</a>
+                    <a id="visor-ficha" href="#">Ver ficha del postulante →</a>
+                </div>
+                <p class="visor-ayuda">Usa las flechas ← → del teclado para pasar de un documento a otro.</p>
+            </aside>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const visor = document.getElementById('visor-doc');
+    if (!visor) return;
+    const vista = document.getElementById('visor-vista');
+    const botones = Array.from(document.querySelectorAll('.ver-doc'));
+    let actual = -1;
+
+    const CLASES_ESTADO = {
+        validado: 'badge-exito',
+        rechazado: 'badge-peligro',
+        pendiente_revision: 'badge-alerta',
+    };
+
+    function extension(url) {
+        const limpio = url.split('?')[0].toLowerCase();
+        return limpio.substring(limpio.lastIndexOf('.') + 1);
+    }
+
+    function mostrar(indice) {
+        if (indice < 0 || indice >= botones.length) return;
+        actual = indice;
+        const d = botones[indice].dataset;
+
+        document.getElementById('visor-titulo').textContent = d.tipo;
+        document.getElementById('visor-subtitulo').textContent = d.postulante;
+        document.getElementById('visor-postulante').textContent = d.postulante;
+        document.getElementById('visor-numero').textContent = d.numero || '';
+        document.getElementById('visor-contador').textContent = (indice + 1) + ' de ' + botones.length;
+
+        const estado = document.getElementById('visor-estado');
+        estado.className = 'badge ' + (CLASES_ESTADO[d.estado] || 'badge-neutro');
+        estado.textContent = d.estadoTexto;
+
+        const obs = document.getElementById('visor-obs');
+        obs.style.display = d.obs ? 'block' : 'none';
+        obs.textContent = d.obs ? 'Motivo: ' + d.obs : '';
+
+        document.getElementById('visor-form').action = d.accion;
+        document.getElementById('visor-observaciones').value = '';
+        document.getElementById('visor-abrir').href = d.url;
+        document.getElementById('visor-descargar').href = d.descargar || d.url;
+        const ficha = document.getElementById('visor-ficha');
+        ficha.href = d.ficha || '#';
+        ficha.style.display = d.ficha ? 'inline' : 'none';
+
+        const ext = extension(d.url);
+        vista.innerHTML = '';
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext)) {
+            const img = document.createElement('img');
+            img.src = d.url;
+            img.alt = d.tipo;
+            vista.appendChild(img);
+        } else if (ext === 'pdf') {
+            // Antes de mostrarlo, se revisa que de verdad sea un PDF; si el
+            // archivo está dañado, se muestra un aviso en vez del error del navegador.
+            const pedido = indice;
+            fetch(d.url, { headers: { Range: 'bytes=0-1023' } })
+                .then(r => { if (!r.ok) throw new Error('no encontrado'); return r.arrayBuffer(); })
+                .then(buf => {
+                    if (pedido !== actual) return;
+                    const inicio = new TextDecoder('latin1').decode(new Uint8Array(buf).slice(0, 1024));
+                    if (!inicio.includes('%PDF')) throw new Error('dañado');
+                    const marco = document.createElement('iframe');
+                    marco.src = d.url;
+                    marco.title = d.tipo;
+                    vista.innerHTML = '';
+                    vista.appendChild(marco);
+                })
+                .catch(err => {
+                    if (pedido !== actual) return;
+                    const noExiste = err.message === 'no encontrado';
+                    vista.innerHTML =
+                        '<div class="visor-sin-vista"><span>⚠️</span>' +
+                        '<p>' + (noExiste
+                            ? 'No se encontró el archivo en el servidor.'
+                            : 'Este archivo está dañado o no es un PDF válido, por eso no se puede mostrar.') +
+                        '<br>Puedes rechazarlo y pedirle al postulante que lo vuelva a subir.</p>' +
+                        '<a class="btn btn-sm" href="' + d.url + '" target="_blank" rel="noopener">Descargar de todas formas</a></div>';
+                });
+        } else if (ext === 'docx' && d.vista) {
+            // Documento de Word: se muestra su contenido (fotos y texto)
+            const marco = document.createElement('iframe');
+            marco.src = d.vista;
+            marco.title = d.tipo;
+            marco.style.background = '#fff';
+            vista.appendChild(marco);
+        } else {
+            vista.innerHTML =
+                '<div class="visor-sin-vista"><span>📄</span>' +
+                '<p>Este tipo de archivo (.' + ext + ') no se puede mostrar dentro del navegador.</p>' +
+                '<a class="btn btn-sm" href="' + d.url + '" target="_blank" rel="noopener">Descargar para revisarlo</a></div>';
+        }
+
+        document.getElementById('visor-anterior').disabled = indice === 0;
+        document.getElementById('visor-siguiente').disabled = indice === botones.length - 1;
+    }
+
+    function abrir(indice) {
+        visor.classList.remove('hidden');
+        visor.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+        mostrar(indice);
+    }
+
+    function cerrar() {
+        visor.classList.add('hidden');
+        visor.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+        vista.innerHTML = '';
+    }
+
+    botones.forEach((boton, i) => boton.addEventListener('click', (e) => { e.preventDefault(); abrir(i); }));
+    document.getElementById('visor-cerrar').addEventListener('click', cerrar);
+    document.getElementById('visor-anterior').addEventListener('click', () => mostrar(actual - 1));
+    document.getElementById('visor-siguiente').addEventListener('click', () => mostrar(actual + 1));
+    document.getElementById('visor-tamano').addEventListener('click', () => visor.classList.toggle('visor-grande'));
+    visor.addEventListener('click', (e) => { if (e.target === visor) cerrar(); });
+    document.addEventListener('keydown', (e) => {
+        if (visor.classList.contains('hidden')) return;
+        if (e.target.tagName === 'TEXTAREA') return;
+        if (e.key === 'Escape') cerrar();
+        if (e.key === 'ArrowLeft') mostrar(actual - 1);
+        if (e.key === 'ArrowRight') mostrar(actual + 1);
+    });
+})();
+</script>

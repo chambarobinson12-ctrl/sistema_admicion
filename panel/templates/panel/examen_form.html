@@ -1,0 +1,44 @@
+{% extends 'panel/base_panel.html' %}
+{% block title %}{% if es_nuevo %}Nuevo examen{% else %}Editar examen{% endif %} - Panel administrativo{% endblock %}
+
+{% block panel_content %}
+    <div class="panel-breadcrumb">
+        <a href="{% url 'panel:examenes_lista' %}">Exámenes</a> ›
+        <span class="actual">{% if es_nuevo %}Nuevo{% else %}Editar{% endif %}</span>
+    </div>
+
+    <div class="form-seccion" style="max-width:560px;">
+        <div class="form-seccion-titulo">
+            <span>{% if es_nuevo %}Nuevo examen{% else %}Editar examen{% endif %}</span>
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <label for="{{ form.nombre.id_for_label }}">Nombre o título del examen</label>
+            {{ form.nombre }}
+            <span class="campo-ayuda">Ej. "Examen de admisión - primera convocatoria", no el nombre de un postulante.</span>
+            {{ form.nombre.errors }}
+
+            <div class="form-grid-2">
+                <div>
+                    <label for="{{ form.fecha.id_for_label }}">Fecha</label>
+                    {{ form.fecha }}
+                    {{ form.fecha.errors }}
+                </div>
+                <div>
+                    <label for="{{ form.hora.id_for_label }}">Hora</label>
+                    {{ form.hora }}
+                    {{ form.hora.errors }}
+                </div>
+            </div>
+
+            <label for="{{ form.lugar.id_for_label }}">Lugar</label>
+            {{ form.lugar }}
+            {{ form.lugar.errors }}
+
+            <div class="form-pie" style="margin-top:20px;">
+                <a href="{% url 'panel:examenes_lista' %}" class="btn btn-secundario">Cancelar</a>
+                <button type="submit" class="btn">Guardar</button>
+            </div>
+        </form>
+    </div>
+{% endblock %}

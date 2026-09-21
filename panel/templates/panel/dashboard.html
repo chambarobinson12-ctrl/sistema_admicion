@@ -1,0 +1,123 @@
+{% extends 'panel/base_panel.html' %}
+{% block title %}Postulantes - Panel administrativo{% endblock %}
+
+{% block panel_content %}
+    <div class="panel-topbar">
+        <div>
+            <h1>Postulantes</h1>
+            {% if convocatoria %}
+                <span class="panel-topbar-subtitulo">{{ convocatoria.nombre }} · Proceso activo hasta el {{ convocatoria.fecha_fin|date:"d \d\e F \d\e Y" }}</span>
+            {% else %}
+                <span class="panel-topbar-subtitulo">No hay ningún proceso de admisión activo por el momento.</span>
+            {% endif %}
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <a href="{% url 'panel:revisar_documentos' %}" class="btn-sm btn">👁 Revisar documentos</a>
+        <a href="{% url 'panel:exportar_postulantes_excel' %}?q={{ filtro_q }}&carrera={{ filtro_carrera }}&avance={{ filtro_avance }}" class="btn-sm btn-secundario" style="white-space:nowrap;">⬇ Descargar Excel de postulantes</a>
+        </div>
+    </div>
+
+    <div class="stat-cards">
+        <div class="stat-card">
+            <span class="stat-card-titulo">Total postulantes</span>
+            <span class="stat-card-valor">{{ total_postulantes }}</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-card-titulo">Proceso completo</span>
+            <span class="stat-card-valor" style="color:var(--exito-texto);">{{ procesos_completos }}</span>
+            <span class="stat-card-nota positiva">✓ Subieron todos sus certificados</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-card-titulo">Proceso incompleto</span>
+            <span class="stat-card-valor" style="color:var(--alerta-texto);">{{ procesos_incompletos }}</span>
+            <span class="stat-card-nota">Dejaron algún paso en blanco</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-card-titulo">Cupos disponibles</span>
+            <span class="stat-card-valor">{{ cupos_disponibles }} <span style="font-size:14px; font-weight:600; color:var(--texto-muted);">/ {{ cupos_totales }}</span></span>
+            <span class="stat-card-nota">Todas las carreras</span>
+        </div>
+    </div>
+
+    <div class="panel-tabla-card">
+        <form method="get" class="panel-filtros">
+            <input type="text" name="q" value="{{ filtro_q }}" placeholder="Buscar por nombre, cédula o N.° de postulación">
+            <select name="carrera">
+                <option value="">Carrera: Todas</option>
+                {% for carrera in carreras %}
+                    <option value="{{ carrera.id }}" {% if filtro_carrera == carrera.id|stringformat:"s" %}selected{% endif %}>{{ carrera.nombre }}</option>
+                {% endfor %}
+            </select>
+            <select name="avance">
+                <option value="">Proceso: Todos</option>
+                <option value="completo" {% if filtro_avance == 'completo' %}selected{% endif %}>Proceso completo</option>
+                <option value="incompleto" {% if filtro_avance == 'incompleto' %}selected{% endif %}>Proceso incompleto</option>
+            </select>
+            <button type="submit" class="btn-sm btn-secundario">Filtrar</button>
+        </form>
+
+        {% if pagina.object_list %}
+            <table class="tabla-postulantes">
+                <thead>
+                    <tr>
+                        <th>Postulante</th>
+                        <th>Carrera</th>
+                        <th>Postulación</th>
+                        <th>Docs.</th>
+                        <th>Proceso</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for inscripcion in pagina.object_list %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'panel:detalle_postulante' inscripcion.id %}" class="fila-link">
+                                    <div class="postulante-celda">
+                                        <div class="avatar-circulo">{{ inscripcion.postulante.iniciales }}</div>
+                                        <div>
+                                            <span class="postulante-nombre">{{ inscripcion.postulante.nombre_completo }}</span>
+                                            <span class="postulante-cedula">CI {{ inscripcion.postulante.usuario.cedula|default:"—" }}</span>
+                                        </div>
+                                    </div>
+                                </a>
+                            </td>
+                            <td><a href="{% url 'panel:detalle_postulante' inscripcion.id %}" class="fila-link">{{ inscripcion.carrera.nombre|default:"Sin asignar" }}</a></td>
+                            <td><a href="{% url 'panel:detalle_postulante' inscripcion.id %}" class="fila-link">{{ inscripcion.fecha_inscripcion|date:"d M Y" }}</a></td>
+<td><a href="{% url 'panel:detalle_postulante' inscripcion.id %}" class="fila-link"><span class="docs-conteo">{{ inscripcion.documentos_subidos_total }}/{{ inscripcion.total_documentos_requeridos }}</span><span class="docs-barras" aria-hidden="true">{% for d in inscripcion.avance_documentos %}<i class="{% if d.situacion == 'subido' %}lleno{% endif %}"></i>{% endfor %}</span></a></td>
+                            <td>
+                                {% if inscripcion.proceso_completo %}
+                                    <span class="badge badge-exito">✓ Proceso completo</span>
+                                {% else %}
+                                    <span class="badge badge-alerta">Proceso incompleto</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align:right;"><a href="{% url 'panel:detalle_postulante' inscripcion.id %}" class="btn-sm btn-secundario">Ver</a></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <div class="panel-paginacion">
+                <span>Mostrando {{ pagina.start_index }}–{{ pagina.end_index }} de {{ pagina.paginator.count }} postulantes</span>
+                <div class="paginas">
+                    {% if pagina.has_previous %}
+                        <a href="?pagina={{ pagina.previous_page_number }}&q={{ filtro_q }}&carrera={{ filtro_carrera }}&avance={{ filtro_avance }}">‹</a>
+                    {% endif %}
+                    {% for numero in pagina.paginator.page_range %}
+                        {% if numero == pagina.number %}
+                            <span class="pagina-actual">{{ numero }}</span>
+                        {% elif numero > pagina.number|add:"-3" and numero < pagina.number|add:"3" %}
+                            <a href="?pagina={{ numero }}&q={{ filtro_q }}&carrera={{ filtro_carrera }}&avance={{ filtro_avance }}">{{ numero }}</a>
+                        {% endif %}
+                    {% endfor %}
+                    {% if pagina.has_next %}
+                        <a href="?pagina={{ pagina.next_page_number }}&q={{ filtro_q }}&carrera={{ filtro_carrera }}&avance={{ filtro_avance }}">›</a>
+                    {% endif %}
+                </div>
+            </div>
+        {% else %}
+            <div class="sin-resultados">No se encontraron postulantes con esos filtros.</div>
+        {% endif %}
+    </div>
+{% endblock %}

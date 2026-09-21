@@ -1,0 +1,28 @@
+{% extends 'usuarios/auth_base.html' %}
+{% load static %}
+{% block title %}Iniciar sesión - ISTAM Admisión{% endblock %}
+
+{% block body_class %}solo-login login-oscuro{% endblock %}
+{% block nav %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block chat %}{% endblock %}
+
+{% block auth_icono %}<img src="{% static 'img/logotipo.jpg' %}" alt="Logo ISTAM" class="login-logo">{% endblock %}
+{% block auth_titulo %}Iniciar sesión{% endblock %}
+{% block auth_subtitulo %}Ingresa tus credenciales para acceder al sistema.{% endblock %}
+
+{% block auth_cuerpo %}
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {% include 'usuarios/_campos.html' %}
+        <input type="hidden" name="next" value="{{ next }}">
+        <button type="submit" class="btn-bloque">Iniciar sesión</button>
+    </form>
+{% endblock %}
+
+{% block auth_pie %}
+    <div class="login-enlaces">
+        <div>¿Olvidaste tu contraseña? <a href="{% url 'password_reset' %}">Recupérala</a></div>
+        <div>¿No tienes cuenta? <a href="{% url 'registro' %}">Crear Cuenta</a></div>
+    </div>
+{% endblock %}

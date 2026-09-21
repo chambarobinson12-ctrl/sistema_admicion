@@ -1,0 +1,55 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ documento.get_tipo_display }}</title>
+    <style>
+        body { margin: 0; background: #e9ece6; font-family: 'Public Sans', system-ui, sans-serif; }
+        #estado { text-align: center; color: #5C6B52; font-size: 14px; padding: 60px 20px; }
+        /* Hoja de Word centrada y adaptada al ancho del visor */
+        .docx-wrapper { background: #e9ece6 !important; padding: 20px 0 !important; }
+        .docx-wrapper > section.docx { box-shadow: 0 2px 10px rgba(0,0,0,.15); margin-bottom: 20px !important; }
+    </style>
+</head>
+<body>
+    <div id="estado">Cargando documento…</div>
+    <div id="documento"></div>
+
+    <script src="{% static 'js/vendor/jszip.min.js' %}"></script>
+    <script src="{% static 'js/vendor/docx-preview.min.js' %}"></script>
+    <script>
+    (function () {
+        const estado = document.getElementById('estado');
+        const contenedor = document.getElementById('documento');
+
+        // Ajusta la hoja al ancho de la ventana del visor (como el zoom de Word)
+        function ajustar() {
+            const hoja = contenedor.querySelector('section.docx');
+            if (!hoja) return;
+            const escala = Math.min(1, (window.innerWidth - 24) / hoja.offsetWidth);
+            const envoltorio = contenedor.querySelector('.docx-wrapper');
+            envoltorio.style.zoom = escala;
+        }
+
+        fetch("{{ documento.archivo.url }}")
+            .then(r => { if (!r.ok) throw new Error('No se encontró el archivo.'); return r.blob(); })
+            .then(blob => docx.renderAsync(blob, contenedor, null, {
+                inWrapper: true,
+                ignoreWidth: false,
+                ignoreHeight: false,
+                renderHeaders: true,
+                renderFooters: true,
+                renderFootnotes: true,
+                breakPages: true,
+                useBase64URL: true,
+            }))
+            .then(() => { estado.remove(); ajustar(); window.addEventListener('resize', ajustar); })
+            .catch(() => {
+                estado.textContent = 'No se pudo mostrar este documento de Word (puede estar dañado). Usa "Descargar documento" para abrirlo en Word.';
+            });
+    })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+{% extends 'panel/base_panel.html' %}
+{% block title %}Carreras - Panel administrativo{% endblock %}
+
+{% block panel_content %}
+    <div class="panel-topbar">
+        <div>
+            <h1>Carreras</h1>
+            <span class="panel-topbar-subtitulo">Carreras tecnológicas que ofrece el instituto.</span>
+        </div>
+    </div>
+
+    <form id="form-eliminar" method="post" action="{% url 'panel:carreras_eliminar' %}"
+          onsubmit="var n = document.querySelectorAll('input[name=carreras]:checked').length; if (!n) { alert('Marca al menos una carrera.'); return false; } return confirm('¿Eliminar ' + n + ' carrera(s)? Esta acción no se puede deshacer.');">
+        {% csrf_token %}
+    </form>
+
+    <div class="panel-tabla-card">
+        {% if carreras %}
+            <table class="tabla-postulantes">
+                <thead>
+                    <tr>
+                        <th style="width:40px;"></th>
+                        <th>Nombre</th>
+                        <th>Código</th>
+                        <th>Estado</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for carrera in carreras %}
+                        <tr>
+                            <td><input type="checkbox" name="carreras" value="{{ carrera.id }}" form="form-eliminar" style="width:16px; height:16px;"></td>
+                            <td><a href="{% url 'panel:carrera_editar' carrera.id %}" class="fila-link">{{ carrera.nombre }}</a></td>
+                            <td><a href="{% url 'panel:carrera_editar' carrera.id %}" class="fila-link">{{ carrera.codigo }}</a></td>
+                            <td>
+                                <div class="proceso-estado-celda">
+                                    <span class="badge {% if carrera.activa %}badge-exito{% else %}badge-alerta{% endif %}">
+                                        {% if carrera.activa %}Activa{% else %}Pausada{% endif %}
+                                    </span>
+                                    <form method="post" action="{% url 'panel:carrera_cambiar_estado' carrera.id %}">
+                                        {% csrf_token %}
+                                        {% if carrera.activa %}
+                                            <button type="submit" class="btn-sm btn-pausar">Pausar carrera</button>
+                                        {% else %}
+                                            <button type="submit" class="btn-sm">Activar carrera</button>
+                                        {% endif %}
+                                    </form>
+                                </div>
+                            </td>
+                            <td><a href="{% url 'panel:carrera_editar' carrera.id %}" class="btn btn-sm btn-secundario">Editar</a></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="sin-resultados">Todavía no hay carreras registradas.</div>
+        {% endif %}
+
+        <div class="tabla-pie-acciones">
+            <a href="{% url 'panel:carrera_crear' %}" class="btn">+ Añadir carrera</a>
+            {% if carreras %}
+                <button type="submit" form="form-eliminar" class="btn btn-peligro-outline">Eliminar</button>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

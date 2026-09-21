@@ -1,0 +1,14 @@
+{% autoescape off %}Hola {{ user.get_full_name|default:user.username }},
+
+Recibimos una solicitud para restablecer la contraseña de tu cuenta en el Sistema de Admisión del Instituto Superior Tecnológico Amazónico.
+
+Tu usuario es: {{ user.username }}
+
+Para crear una nueva contraseña, abre este enlace (válido por 24 horas):
+{{ protocol }}://{{ domain }}{% url 'password_reset_confirm' uidb64=uid token=token %}
+
+Si tú no pediste este cambio, ignora este mensaje: tu contraseña actual sigue funcionando.
+
+Instituto Superior Tecnológico Amazónico
+Sistema de Admisión Estudiantil
+{% endautoescape %}

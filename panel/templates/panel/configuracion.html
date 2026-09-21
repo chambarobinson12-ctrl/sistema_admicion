@@ -1,0 +1,227 @@
+{% extends 'panel/base_panel.html' %}
+{% load panel_tags %}
+{% block title %}Configuración - Panel administrativo{% endblock %}
+
+{% block panel_content %}
+    <div class="panel-topbar">
+        <div>
+            <h1>Configuración</h1>
+            <span class="panel-topbar-subtitulo">Procesos de admisión, estado de los postulantes y personal del sistema.</span>
+        </div>
+    </div>
+
+    <!-- 1. Proceso activo -->
+    <div class="tarjeta config-activo">
+        <div>
+            <span class="tarjeta-titulo">Proceso de admisión activo</span>
+            {% if convocatoria_activa %}
+                <strong class="config-activo-nombre">{{ convocatoria_activa.nombre }}</strong>
+                <span class="campo-ayuda">Del {{ convocatoria_activa.fecha_inicio|date:"d M Y" }} al {{ convocatoria_activa.fecha_fin|date:"d M Y" }}</span>
+            {% else %}
+                <span class="campo-ayuda">No hay ningún proceso activo en este momento.</span>
+            {% endif %}
+        </div>
+        <div class="config-acciones">
+            {% if convocatoria_activa %}
+                <a href="{% url 'panel:proceso_historial' convocatoria_activa.id %}" class="btn-sm btn-secundario">Ver resultados</a>
+                <a href="{% url 'panel:convocatoria_editar' convocatoria_activa.id %}" class="btn-sm btn-secundario">Editar este proceso</a>
+            {% endif %}
+            <a href="{% url 'panel:convocatoria_crear' %}" class="btn-sm btn">+ Nuevo proceso</a>
+        </div>
+    </div>
+        {% tarjeta_pasos %}
+    <div class="tarjeta">
+        <span class="tarjeta-titulo">Proceso actual</span>
+        {% if convocatorias %}
+            {% if procesos_activos > 1 %}
+                <p class="campo-ayuda" style="margin:0 0 12px; color:var(--alerta-texto);">
+                    Hay {{ procesos_activos }} procesos activos al mismo tiempo. Elige cuál es el proceso actual para que los postulantes solo vean ese.
+                </p>
+            {% endif %}
+            <form method="post" style="display:flex; flex-wrap:wrap; align-items:center; gap:10px;">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="proceso_actual">
+                <label for="proceso-actual" style="margin:0; font-size:13px; font-weight:600;">Cambiar proceso actual:</label>
+                <select id="proceso-actual" name="convocatoria" style="width:auto; max-width:100%; padding:8px 12px; border:1px solid var(--borde); border-radius:8px; font-size:13px; font-weight:600; background:#fff;">
+                    {% for c in convocatorias %}
+                        <option value="{{ c.id }}" {% if convocatoria_activa and c.id == convocatoria_activa.id %}selected{% endif %}>
+                            {{ c.nombre }} ({{ c.fecha_inicio|date:"d M Y" }} – {{ c.fecha_fin|date:"d M Y" }}){% if c.activa %} · Activa{% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn-sm btn-secundario" onclick="return confirm('El proceso elegido quedará como el único activo y los demás se cerrarán. ¿Continuar?');">Guardar</button>
+            </form>
+        {% endif %}
+    </div>
+
+    <!-- 2. Historial de procesos -->
+    <div class="tarjeta">
+        <div class="tarjeta-subtitulo-fila">
+            <span class="tarjeta-titulo" style="margin:0;">Historial de procesos de admisión</span>
+            <span class="campo-ayuda" style="margin:0;">Cuántos postulantes completaron su proceso (subieron todos los documentos) y cuántos no. Desde "Ver y reintegrar" puedes pasar al proceso nuevo a quienes no lo completaron.</span>
+        </div>
+        {% if procesos %}
+            <div class="tabla-scroll">
+                <table class="tabla-postulantes tabla-config">
+                    <thead>
+                        <tr>
+                            <th>Proceso</th>
+                            <th>Fechas</th>
+                            <th class="num">Postulantes</th>
+                            <th class="num">Proceso completo</th>
+                            <th class="num">Incompleto</th>
+                            <th class="num">Sin documentos</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in procesos %}
+                            <tr>
+                                <td>
+                                    <strong>{{ p.convocatoria.nombre }}</strong>
+                                    {% if p.convocatoria.activa %}<span class="badge badge-exito">Activo</span>{% else %}<span class="badge badge-neutro">Cerrado</span>{% endif %}
+                                </td>
+                                <td class="campo-ayuda">{{ p.convocatoria.fecha_inicio|date:"d M Y" }} – {{ p.convocatoria.fecha_fin|date:"d M Y" }}</td>
+                                <td class="num"><strong>{{ p.postulantes }}</strong></td>
+                                <td class="num"><span class="cifra cifra-exito">{{ p.completos }}</span></td>
+                                <td class="num"><span class="cifra cifra-peligro">{{ p.incompletos }}</span></td>
+                                <td class="num"><span class="cifra">{{ p.vacios }}</span></td>
+                                <td class="num"><a href="{% url 'panel:proceso_historial' p.convocatoria.id %}" class="btn-sm btn-secundario">Ver y reintegrar →</a></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <span class="campo-ayuda">Todavía no hay procesos de admisión registrados.</span>
+        {% endif %}
+    </div>
+
+    <!-- 3. Estado de los postulantes -->
+    <div class="tarjeta">
+        <div class="tarjeta-subtitulo-fila">
+            <span class="tarjeta-titulo" style="margin:0;">Estado de los postulantes</span>
+            <a href="{% url 'panel:estados_postulantes' %}{% if proceso %}?proceso={{ proceso.id }}{% endif %}" class="btn-sm btn">Revisar y comentar →</a>
+        </div>
+        <p class="campo-ayuda" style="margin:0 0 14px;">Documentos que ha subido cada postulante{% if proceso %} en "{{ proceso.nombre }}"{% endif %}. ✓ subido · ✗ debe volver a subirlo · ○ no lo ha subido.</p>
+        <div class="estado-resumen">
+            <a href="?proceso={{ proceso.id }}" class="estado-resumen-item">
+                <span class="estado-resumen-num">{{ resumen_avance.postulantes }}</span>
+                <span>Postulantes</span>
+            </a>
+            <a href="?proceso={{ proceso.id }}&avance=completo" class="estado-resumen-item estado-aprobada">
+                <span class="estado-resumen-num">{{ resumen_avance.completos }}</span>
+                <span>✓ Proceso completo</span>
+            </a>
+            <a href="?proceso={{ proceso.id }}&avance=incompleto" class="estado-resumen-item estado-docs_pendientes">
+                <span class="estado-resumen-num">{{ resumen_avance.incompletos }}</span>
+                <span>Incompleto</span>
+            </a>
+            <a href="?proceso={{ proceso.id }}&avance=vacio" class="estado-resumen-item">
+                <span class="estado-resumen-num">{{ resumen_avance.vacios }}</span>
+                <span>Sin documentos</span>
+            </a>
+        </div>
+
+        <div class="panel-tabla-card" style="margin-top:16px;">
+            <form method="get" class="panel-filtros">
+                <select name="proceso" style="width:auto;">
+                    {% for c in convocatorias %}
+                        <option value="{{ c.id }}" {% if proceso and c.id == proceso.id %}selected{% endif %}>{{ c.nombre }}</option>
+                    {% endfor %}
+                </select>
+                <input type="text" name="q" value="{{ filtro_q }}" placeholder="Buscar por nombre, cédula o N.° de postulación">
+                <select name="avance" style="width:auto;">
+                    <option value="">Todos</option>
+                    <option value="completo" {% if filtro_avance == 'completo' %}selected{% endif %}>Proceso completo</option>
+                    <option value="incompleto" {% if filtro_avance == 'incompleto' %}selected{% endif %}>Incompleto</option>
+                    <option value="vacio" {% if filtro_avance == 'vacio' %}selected{% endif %}>Sin documentos</option>
+                </select>
+                <button type="submit" class="btn-sm btn-secundario">Filtrar</button>
+            </form>
+
+            {% if pagina.object_list %}
+                <table class="tabla-postulantes">
+                    <thead>
+                        <tr>
+                            <th>Postulante</th>
+                            <th>Carrera</th>
+                            <th>Documentos subidos</th>
+                            <th>Avance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for inscripcion in pagina.object_list %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'panel:detalle_postulante' inscripcion.id %}" class="fila-link">
+                                        <span class="postulante-nombre">{{ inscripcion.postulante.nombre_completo }}</span>
+                                        <span class="postulante-cedula">CI {{ inscripcion.postulante.usuario.cedula|default:"—" }} · {{ inscripcion.numero_postulacion }}</span>
+                                    </a>
+                                </td>
+                                <td>{{ inscripcion.carrera.nombre|default:"Sin asignar" }}</td>
+                                <td>{% include 'panel/_avance_docs.html' %}</td>
+                                <td>{% include 'panel/_avance_badge.html' %}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% if pagina.has_other_pages %}
+                    <div class="panel-paginacion">
+                        <span>Mostrando {{ pagina.start_index }}–{{ pagina.end_index }} de {{ pagina.paginator.count }}</span>
+                        <div class="paginas">
+                            {% if pagina.has_previous %}<a href="?proceso={{ proceso.id }}&q={{ filtro_q }}&avance={{ filtro_avance }}&pagina={{ pagina.previous_page_number }}">‹</a>{% endif %}
+                            <span class="pagina-actual">{{ pagina.number }}</span>
+                            {% if pagina.has_next %}<a href="?proceso={{ proceso.id }}&q={{ filtro_q }}&avance={{ filtro_avance }}&pagina={{ pagina.next_page_number }}">›</a>{% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="sin-resultados">{% if proceso %}No hay postulantes con esos filtros.{% else %}No hay un proceso seleccionado.{% endif %}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 4. Personal -->
+    <div class="tarjeta">
+        <span class="tarjeta-titulo">Personal de admisión</span>
+        <div class="personal-lista">
+            {% for usuario in personal_admision %}
+                <div class="personal-item">
+                    <div class="avatar-circulo">{{ usuario.username|slice:":2"|upper }}</div>
+                    <div class="personal-info">
+                        <strong>{{ usuario.get_full_name|default:usuario.username }}</strong>
+                        <span>{{ usuario.email|default:"Sin correo" }}</span>
+                    </div>
+                    {% if usuario.is_superuser %}
+                        <span class="badge badge-primario">Administrador principal</span>
+                    {% elif usuario.rol == 'admin_admision' %}
+                        <span class="badge badge-exito">Personal de admisión</span>
+                    {% else %}
+                        <span class="badge badge-primario">Administrador (staff)</span>
+                    {% endif %}
+                    {% if puede_gestionar_personal and usuario.rol == 'admin_admision' and not usuario.is_superuser and not usuario.is_staff and usuario != request.user %}
+                        <form method="post" action="{% url 'panel:personal_quitar' usuario.id %}" onsubmit="return confirm('¿Quitar el acceso al panel a {{ usuario.username }}?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-sm btn-peligro-outline">Quitar acceso</button>
+                        </form>
+                    {% endif %}
+                </div>
+            {% empty %}
+                <span class="campo-ayuda">No hay usuarios de administración registrados.</span>
+            {% endfor %}
+        </div>
+
+        {% if puede_gestionar_personal %}
+            <form method="post" action="{% url 'panel:personal_agregar' %}" class="personal-agregar">
+                {% csrf_token %}
+                <label for="nuevo-personal">Dar acceso al panel a otra persona</label>
+                <div class="personal-agregar-fila">
+                    <input type="text" id="nuevo-personal" name="usuario" placeholder="Usuario, correo o cédula de su cuenta" required>
+                    <button type="submit" class="btn-sm">Agregar como personal</button>
+                </div>
+                <span class="campo-ayuda">La persona primero debe crear su cuenta en "Registrarse".</span>
+            </form>
+        {% endif %}
+    </div>
+{% endblock %}

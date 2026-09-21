@@ -1,0 +1,9 @@
+{% extends 'usuarios/auth_base.html' %}
+{% block title %}Contraseña actualizada - ISTAM Admisión{% endblock %}
+{% block auth_icono %}✅{% endblock %}
+{% block auth_titulo %}¡Listo! Contraseña actualizada{% endblock %}
+{% block auth_subtitulo %}Ya puedes iniciar sesión con tu nueva contraseña.{% endblock %}
+
+{% block auth_cuerpo %}
+    <a href="{% url 'login' %}" class="btn btn-bloque">Iniciar sesión</a>
+{% endblock %}

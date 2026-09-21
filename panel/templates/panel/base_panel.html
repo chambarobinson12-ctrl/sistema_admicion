@@ -1,0 +1,61 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Panel administrativo - ISTAM Admisión{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/estilos.css' %}">
+</head>
+<body>
+<div class="panel-layout">
+    <aside class="panel-sidebar">
+        <a href="/panel/" class="brand-link">
+            <img src="{% static 'img/logotipo.jpg' %}" alt="Logo ISTAM" class="brand-logo">
+            <span class="brand-text">
+                <strong>Instituto Superior Tecnológico Amazónico</strong>
+                <small>Panel de Admisiones · ISTAM</small>
+            </span>
+        </a>
+
+        <span class="panel-nav-grupo">General</span>
+        <a href="{% url 'inicio' %}" class="panel-nav-item">Sitio público</a>
+        <a href="{% url 'panel:dashboard' %}" class="panel-nav-item {% if request.resolver_match.url_name == 'dashboard' %}activo{% endif %}">Postulantes</a>
+        <a href="{% url 'panel:revisar_documentos' %}" class="panel-nav-item {% if request.resolver_match.url_name == 'revisar_documentos' %}activo{% endif %}">Revisión de documentos</a>
+        <a href="{% url 'panel:convocatorias_lista' %}" class="panel-nav-item {% if request.resolver_match.url_name in 'convocatorias_lista,convocatoria_crear,convocatoria_editar,convocatoria_detalle' %}activo{% endif %}">Procesos de admisión</a>
+        <a href="{% url 'panel:carreras_lista' %}" class="panel-nav-item {% if request.resolver_match.url_name in 'carreras_lista,carrera_crear,carrera_editar' %}activo{% endif %}">Carreras</a>
+
+        <a href="{% url 'panel:reportes' %}" class="panel-nav-item {% if request.resolver_match.url_name == 'reportes' %}activo{% endif %}">Reportes</a>
+        <a href="{% url 'panel:configuracion' %}" class="panel-nav-item {% if request.resolver_match.url_name in 'configuracion,estados_postulantes' %}activo{% endif %}">Configuración</a>
+        <a href="{% url 'password_change' %}" class="panel-nav-item">Cambiar contraseña</a>
+
+        <div class="panel-usuario">
+            <div class="avatar-circulo">{{ request.user.username|slice:":2"|upper }}</div>
+            <div class="panel-usuario-info">
+                <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
+                <span>{% if request.user.is_superuser %}Administrador principal{% elif request.user.rol == 'admin_admision' %}Personal de admisión{% else %}Administrador{% endif %}</span>
+            </div>
+            <form method="post" action="{% url 'logout' %}" class="logout-form">
+                {% csrf_token %}
+                <button type="submit" class="logout-link" title="Cerrar sesión">Salir</button>
+            </form>
+        </div>
+    </aside>
+
+    <main class="panel-main">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="mensaje mensaje-{{ message.tags|default:'info' }}" role="status">
+                    <span>{{ message }}</span>
+                    <button type="button" class="mensaje-cerrar" aria-label="Cerrar aviso" onclick="this.parentElement.remove()">&times;</button>
+                </div>
+            {% endfor %}
+        {% endif %}
+        {% block panel_content %}{% endblock %}
+    </main>
+</div>
+</body>
+</html>

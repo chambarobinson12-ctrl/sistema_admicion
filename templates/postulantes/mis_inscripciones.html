@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% block title %}Mi proceso - ISTAM Admisión{% endblock %}
+
+{% block content %}
+    <h1 style="font-size:21px; margin-bottom:4px;">Mi proceso</h1>
+    <p style="font-size:13.5px; color:var(--texto-muted); margin-bottom:20px;">{{ proceso_config.descripcion|linebreaksbr }}</p>
+
+    {% if inscripciones %}
+        {% for inscripcion in inscripciones %}
+            {% with avance=inscripcion.avance_config %}
+            <div class="proceso-card">
+                <div class="proceso-card-header">
+                    <div>
+                        <h3>{{ inscripcion.carrera|default:"Carrera sin asignar" }}</h3>
+                        <span class="proceso-fecha">{{ inscripcion.convocatoria }} · Inscrito el {{ inscripcion.fecha_inscripcion|date:"d/m/Y" }}</span>
+                    </div>
+                    <span class="proceso-numero">N.° {{ inscripcion.numero_postulacion }}</span>
+                </div>
+
+                <div class="progreso-track">
+                    {% for item in avance %}
+                        <div class="progreso-paso paso-click {% if item.situacion == 'rechazado' %}rechazado{% elif item.situacion == 'subido' or item.marcado %}completado{% endif %}" data-paso="{{ forloop.counter }}" data-situacion="{% if item.situacion == 'rechazado' %}rechazado{% elif item.situacion == 'subido' or item.marcado %}subido{% else %}falta{% endif %}" role="button" tabindex="0">
+                            <div class="circulo">{% if item.situacion == 'rechazado' %}!{% elif item.situacion == 'subido' or item.marcado %}✓{% else %}{{ forloop.counter }}{% endif %}</div>
+                             <span class="paso-nombre">{{ item.corto }}</span>
+                             <span class="paso-sube">Sube: {{ item.etiqueta }}</span>
+                        </div>
+                        {% if not forloop.last %}
+                            <div class="progreso-linea {% if item.situacion == 'subido' or item.marcado %}completada{% endif %}"></div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                <p class="paso-pista">Toca un paso para ver o subir su documento.</p>
+
+                <p class="proceso-estado-linea">
+                    Estado actual:
+                    <span class="badge
+                        {% if inscripcion.estado == 'aprobada' %}badge-exito
+                        {% elif inscripcion.estado == 'rechazada' %}badge-peligro
+                        {% elif inscripcion.estado == 'en_revision' %}badge-primario
+                        {% else %}badge-alerta{% endif %}">
+                        {{ inscripcion.get_estado_display }}
+                    </span>
+                </p>
+
+                {% if inscripcion.comentario_revision %}
+                    <div class="mensaje mensaje-warning" style="box-shadow:none; margin-top:14px;">
+                        <span><strong>Comentario de admisión</strong> ({{ inscripcion.fecha_comentario|date:"d/m/Y" }}): {{ inscripcion.comentario_revision }}</span>
+                    </div>
+                {% endif %}
+
+                {% for item in avance %}
+                    <div class="paso-panel" data-paso="{{ forloop.counter }}" hidden>
+                        <div class="paso-panel-cab">
+                            <strong>Paso {{ forloop.counter }} · {{ item.corto }}</strong>
+                            {% if item.situacion == 'falta' %}
+                                <span class="badge badge-neutro">Sin subir</span>
+                            {% elif item.documento.estado == 'validado' %}
+                                <span class="badge badge-exito">Validado</span>
+                            {% elif item.documento.estado == 'rechazado' %}
+                                <span class="badge badge-peligro">Rechazado</span>
+                            {% else %}
+                                <span class="badge badge-alerta">Pendiente de revisión</span>
+                            {% endif %}
+                        </div>
+                        <p class="paso-panel-desc">{{ item.etiqueta }}</p>
+                        {% if item.ayuda %}<p class="campo-ayuda" style="font-size:13px; margin:0 0 12px;">{{ item.ayuda|linebreaksbr }}</p>{% endif %}
+
+                        {% if forloop.first %}
+
+                            {% if inscripcion.estado != 'aprobada' %}
+                                {% with f=inscripcion.form_datos %}
+                                <form method="post" action="{% url 'editar_datos' inscripcion.id %}" class="paso-datos">
+                                    {% csrf_token %}
+                                    <div class="form-grid-2">
+                                        <div>{{ f.nombres.label_tag }}{{ f.nombres }}</div>
+                                        <div>{{ f.apellidos.label_tag }}{{ f.apellidos }}</div>
+                                        <div>{{ f.fecha_nacimiento.label_tag }}{{ f.fecha_nacimiento }}</div>
+                                        <div>{{ f.genero.label_tag }}{{ f.genero }}</div>
+                                        <div>{{ f.telefono.label_tag }}{{ f.telefono }}</div>
+                                        <div>{{ f.colegio_procedencia.label_tag }}{{ f.colegio_procedencia }}</div>
+                                        <div style="grid-column:1 / -1;">{{ f.direccion.label_tag }}{{ f.direccion }}</div>
+                                        <div style="grid-column:1 / -1;">{{ f.carrera.label_tag }}{{ f.carrera }}</div>
+                                    </div>
+                                    <button type="submit" class="btn-sm" style="margin-top:14px;">Guardar cambios</button>
+                                </form>
+                                {% endwith %}
+                            {% else %}
+                                <p class="campo-ayuda">Tu postulación ya fue aprobada; los datos no se pueden modificar.</p>
+                            {% endif %}
+                        {% else %}
+                            {% if inscripcion.estado != 'aprobada' %}
+                                <form method="post" action="{% url 'marcar_paso' inscripcion.id item.tipo %}" class="paso-check">
+                                    {% csrf_token %}
+                                    <label class="paso-check-label">
+                                        <input type="checkbox" name="realizado" {% if item.marcado %}checked{% endif %} onchange="this.form.submit()">
+                                        Ya realicé este paso
+                                    </label>
+                                </form>
+                            {% elif item.marcado %}
+                                <p class="campo-ayuda">✓ Paso realizado</p>
+                            {% endif %}
+                        {% endif %}
+
+                          {% if item.documento %}
+                            {% if item.documento.estado == 'rechazado' %}
+                                <div class="aviso-rechazo">
+                                    <strong>Documento rechazado por admisión</strong>
+                                    <span>{{ item.documento.observaciones|default:"Vuelve a subir un documento válido." }}</span>
+                                </div>
+                            {% endif %}
+
+                            <p class="doc-meta">Cargado el {{ item.documento.fecha_subida|date:"d/m/Y" }} · <a href="{{ item.documento.archivo.url }}" target="_blank">Ver archivo</a></p>
+
+                            {% if inscripcion.estado != 'aprobada' and item.documento.estado != 'validado' %}
+                                <form method="post" action="{% url 'eliminar_documento' inscripcion.id item.tipo %}" class="proc-eliminar" onsubmit="return confirm('¿Eliminar este documento? Podrás subir otro después.');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn-sm btn-peligro-outline">Eliminar documento</button>
+                                </form>
+                            {% endif %}
+                        {% endif %}
+
+                        {% if inscripcion.estado != 'aprobada' %}
+                            <form method="post" action="{% url 'subir_documento' inscripcion.id item.tipo %}" enctype="multipart/form-data" class="proc-subida">
+                                {% csrf_token %}
+                                <input type="file" id="arch-{{ inscripcion.id }}-{{ item.tipo }}" name="archivo" accept=".pdf,.docx,.jpg,.jpeg,.png" class="proc-oculto" required>
+                                <label for="arch-{{ inscripcion.id }}-{{ item.tipo }}" class="proc-boton-sel">Seleccionar documento</label>
+                                <span class="proc-nombre">Ningún documento seleccionado</span>
+                                <button type="submit" class="btn-sm">{% if item.documento %}Cambiar documento{% else %}Subir documento{% endif %}</button>
+                            </form>
+                            <p class="campo-ayuda">PDF, Word (.docx), JPG o PNG. Máximo 8 MB.</p>
+                        {% endif %}
+
+                        <div class="wizard-botones">
+                            {% if forloop.first %}<span></span>{% else %}<button type="button" class="btn-secundario" data-atras>Volver atrás</button>{% endif %}
+                            {% if forloop.last %}<a href="{% url 'finalizar_proceso' %}" class="btn">Guardar</a>{% else %}<button type="button" data-siguiente>Continuar</button>{% endif %}                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            {% endwith %}
+        {% endfor %}
+    {% else %}
+        <div class="tarjeta" style="text-align:center;">
+            <h3 style="margin-bottom:6px;">Empieza tu proceso de admisión</h3>
+            <p style="font-size:13.5px; color:var(--texto-muted); margin-bottom:6px;">Paso 1 · Registro: completa tus datos personales y elige tu carrera para empezar.</p>
+            <a href="{% url 'postular' %}" class="btn">Empezar mi registro</a>
+        </div>
+    {% endif %}
+
+    <script>
+        document.querySelectorAll('.proceso-card').forEach(function (card) {
+            var pasos = card.querySelectorAll('.paso-click');
+            var paneles = card.querySelectorAll('.paso-panel');
+
+            function abrir(numero) {
+                pasos.forEach(function (p) { p.classList.toggle('seleccionado', p.dataset.paso === numero); });
+                paneles.forEach(function (p) { p.hidden = p.dataset.paso !== numero; });
+            }
+
+            card.querySelectorAll('[data-siguiente], [data-atras]').forEach(function (boton) {
+                boton.addEventListener('click', function () {
+                    var panel = boton.closest('.paso-panel');
+                    var destino = parseInt(panel.dataset.paso, 10) + (boton.hasAttribute('data-siguiente') ? 1 : -1);
+                    abrir(String(destino));
+                });
+            });
+
+            var primeroPendiente = null;
+            pasos.forEach(function (paso) {
+                if (!primeroPendiente && paso.dataset.situacion !== 'subido') primeroPendiente = paso;
+                function alternar() {
+                    abrir(paso.classList.contains('seleccionado') ? '' : paso.dataset.paso);
+                }
+                paso.addEventListener('click', alternar);
+                paso.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); alternar(); }
+                });
+            });
+
+            if (primeroPendiente) {
+                primeroPendiente.classList.add('actual');
+                abrir(primeroPendiente.dataset.paso);
+            } else if (pasos.length) {
+                abrir(pasos[0].dataset.paso);
+            }
+
+            var pedido = new URLSearchParams(window.location.search).get('paso');
+            if (pedido && card.querySelector('.paso-click[data-paso="' + pedido + '"]')) abrir(pedido);
+        });
+
+        document.querySelectorAll('.proc-subida input[type="file"]').forEach(function (entrada) {
+            entrada.addEventListener('change', function () {
+                var nombre = entrada.closest('.proc-subida').querySelector('.proc-nombre');
+                nombre.textContent = entrada.files.length ? entrada.files[0].name : 'Ningún documento seleccionado';
+            });
+        });
+    </script>
+{% endblock %}

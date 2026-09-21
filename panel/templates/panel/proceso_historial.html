@@ -1,0 +1,181 @@
+{% extends 'panel/base_panel.html' %}
+{% block title %}{{ convocatoria.nombre }} - Resultados del proceso{% endblock %}
+
+{% block panel_content %}
+    <div class="panel-breadcrumb">
+        <a href="{% url 'panel:configuracion' %}">← Configuración</a>
+        <span>/</span>
+        <span class="actual">{{ convocatoria.nombre }}</span>
+    </div>
+
+    <div class="panel-topbar">
+        <div>
+            <h1>{{ convocatoria.nombre }}
+                {% if convocatoria.activa %}<span class="badge badge-exito">Activo</span>{% else %}<span class="badge badge-neutro">Cerrado</span>{% endif %}
+            </h1>
+            <span class="panel-topbar-subtitulo">Del {{ convocatoria.fecha_inicio|date:"d M Y" }} al {{ convocatoria.fecha_fin|date:"d M Y" }}</span>
+        </div>
+    </div>
+
+    <div class="stat-cards">
+        <div class="stat-card">
+            <span class="stat-card-titulo">Inscritos</span>
+            <span class="stat-card-valor">{{ resumen.inscritos }}</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-card-titulo">Pasaron (aprobados)</span>
+            <span class="stat-card-valor" style="color:var(--exito-texto);">{{ resumen.aprobados }}</span>
+            <span class="stat-card-nota positiva">{{ resumen.porcentaje_aprobados }}% del total</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-card-titulo">No pasaron</span>
+            <span class="stat-card-valor" style="color:var(--peligro-texto);">{{ resumen.no_aprobados }}</span>
+            <span class="stat-card-nota">Postulación rechazada</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-card-titulo">En trámite</span>
+            <span class="stat-card-valor">{{ resumen.en_tramite }}</span>
+            <span class="stat-card-nota">Sin decisión final</span>
+        </div>
+    </div>
+
+    <div class="tarjeta">
+        <span class="tarjeta-titulo">Resultados por carrera</span>
+        {% if por_carrera %}
+            <div class="tabla-scroll">
+                <table class="tabla-postulantes tabla-config">
+                    <thead><tr><th>Carrera</th><th class="num">Inscritos</th><th class="num">Pasaron</th><th class="num">No pasaron</th><th class="num">En trámite</th></tr></thead>
+                    <tbody>
+                        {% for fila in por_carrera %}
+                            <tr>
+                                <td><strong>{{ fila.carrera }}</strong></td>
+                                <td class="num">{{ fila.inscritos }}</td>
+                                <td class="num"><span class="cifra cifra-exito">{{ fila.aprobados }}</span></td>
+                                <td class="num"><span class="cifra cifra-peligro">{{ fila.no_aprobados }}</span></td>
+                                <td class="num"><span class="cifra">{{ fila.en_tramite }}</span></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <span class="campo-ayuda">Este proceso no tiene postulantes inscritos.</span>
+        {% endif %}
+    </div>
+
+    <div class="tarjeta">
+        <div class="tarjeta-subtitulo-fila">
+            <span class="tarjeta-titulo" style="margin:0;">Reintegrar postulantes a otro proceso</span>
+        </div>
+        <p class="campo-ayuda" style="margin:0 0 14px;">
+            Marca a los postulantes que quieres volver a inscribir y elige el proceso de destino. Se crea una nueva postulación con la misma carrera,
+            sin borrar su historial en este proceso.
+        </p>
+
+        <form method="get" class="panel-filtros" style="padding:0; border:none; margin-bottom:14px;">
+            <select name="ver">
+                <option value="no_aprobados" {% if ver == 'no_aprobados' %}selected{% endif %}>Mostrar: los que no pasaron</option>
+                <option value="en_tramite" {% if ver == 'en_tramite' %}selected{% endif %}>Mostrar: los que quedaron en trámite</option>
+                <option value="aprobados" {% if ver == 'aprobados' %}selected{% endif %}>Mostrar: los que pasaron</option>
+                <option value="todos" {% if ver == 'todos' %}selected{% endif %}>Mostrar: todos</option>
+            </select>
+            {% if destino %}<input type="hidden" name="destino" value="{{ destino.id }}">{% endif %}
+            <button type="submit" class="btn-sm btn-secundario">Ver</button>
+        </form>
+
+        {% if not otros_procesos %}
+            <div class="alerta-form" style="background:var(--alerta-suave); color:var(--alerta-texto); border-left-color:var(--alerta);">
+                Para reintegrar postulantes primero crea el nuevo proceso de admisión.
+                <a href="{% url 'panel:convocatoria_crear' %}">Crear proceso →</a>
+            </div>
+        {% elif candidatos %}
+            <form method="post" action="{% url 'panel:reintegrar_postulantes' convocatoria.id %}" id="form-reintegro">
+                {% csrf_token %}
+                <div class="tabla-scroll">
+                    <table class="tabla-postulantes tabla-config">
+                        <thead>
+                            <tr>
+                                <th style="width:36px;"><input type="checkbox" id="marcar-todos" title="Marcar todos"></th>
+                                <th>Postulante</th>
+                                <th>Carrera</th>
+                                <th>Estado</th>
+                                <th class="num">Docs. validados</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for inscripcion in candidatos %}
+                                <tr {% if inscripcion.ya_reintegrado %}class="fila-inactiva"{% endif %}>
+                                    <td>
+                                        {% if inscripcion.ya_reintegrado %}
+                                            <span title="Ya está inscrito en el proceso de destino">✔</span>
+                                        {% else %}
+                                            <input type="checkbox" name="inscripciones" value="{{ inscripcion.id }}" class="check-reintegro">
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="postulante-nombre">{{ inscripcion.postulante.nombre_completo }}</span>
+                                        <span class="postulante-cedula">CI {{ inscripcion.postulante.usuario.cedula|default:"—" }} · {{ inscripcion.numero_postulacion }}</span>
+                                        {% if inscripcion.ya_reintegrado %}<span class="badge badge-exito">Ya inscrito en {{ destino.nombre }}</span>{% endif %}
+                                    </td>
+                                    <td>
+                                        {{ inscripcion.carrera.nombre }}
+                                        {% if destino and not inscripcion.carrera_en_destino %}<span class="campo-ayuda" style="color:var(--alerta-texto);">⚠ Sin cupos en el proceso de destino</span>{% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if inscripcion.estado == 'aprobada' %}badge-exito{% elif inscripcion.estado == 'rechazada' %}badge-peligro{% elif inscripcion.estado == 'en_revision' %}badge-primario{% else %}badge-alerta{% endif %}">{{ inscripcion.get_estado_display }}</span>
+                                    </td>
+                                    <td class="num">{{ inscripcion.docs_validados }}/{{ total_tipos }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="reintegro-barra">
+                    <div class="reintegro-opciones">
+                        <label>Reintegrar al proceso
+                            <select name="destino">
+                                {% for conv in otros_procesos %}
+                                    <option value="{{ conv.id }}" {% if destino and conv.id == destino.id %}selected{% endif %}>{{ conv.nombre }}{% if conv.activa %} (activo){% endif %}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <div class="checkbox-linea" style="margin-top:6px;">
+                            <input type="checkbox" name="copiar_documentos" value="1" id="copiar-docs" checked>
+                            <label for="copiar-docs">Conservar los documentos que ya estaban validados (así no tienen que volver a subirlos)</label>
+                        </div>
+                        <div class="checkbox-linea" style="margin-top:6px;">
+                            <input type="checkbox" name="avisar" value="1" id="avisar-reintegro" checked>
+                            <label for="avisar-reintegro">Avisar a cada postulante por correo</label>
+                        </div>
+                    </div>
+                    <button type="submit" id="btn-reintegrar" disabled>Reintegrar seleccionados (0)</button>
+                </div>
+            </form>
+        {% else %}
+            <div class="sin-resultados">No hay postulantes en este grupo.</div>
+        {% endif %}
+    </div>
+
+    <script>
+    (function () {
+        const checks = Array.from(document.querySelectorAll('.check-reintegro'));
+        const todos = document.getElementById('marcar-todos');
+        const boton = document.getElementById('btn-reintegrar');
+        if (!boton) return;
+        function actualizar() {
+            const n = checks.filter(c => c.checked).length;
+            boton.textContent = 'Reintegrar seleccionados (' + n + ')';
+            boton.disabled = n === 0;
+        }
+        checks.forEach(c => c.addEventListener('change', actualizar));
+        if (todos) todos.addEventListener('change', () => { checks.forEach(c => c.checked = todos.checked); actualizar(); });
+        document.getElementById('form-reintegro').addEventListener('submit', (e) => {
+            const destino = e.target.querySelector('select[name="destino"]');
+            const nombre = destino.options[destino.selectedIndex].text;
+            const n = checks.filter(c => c.checked).length;
+            if (!confirm('¿Reintegrar ' + n + ' postulante(s) al proceso "' + nombre + '"?')) e.preventDefault();
+        });
+    })();
+    </script>
+{% endblock %}

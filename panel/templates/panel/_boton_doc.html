@@ -1,0 +1,13 @@
+{% comment %}Botón que abre un documento en el visor. Espera: doc, etiqueta, inscripcion, texto{% endcomment %}
+<button type="button" class="ver-doc {{ clase|default:'doc-chip' }}{% if clase|default:'doc-chip' == 'doc-chip' %} doc-chip-{{ doc.estado }}{% endif %}"
+    data-url="{{ doc.archivo.url }}"
+    data-vista="{% url 'panel:vista_documento' doc.id %}"
+    data-descargar="{% url 'panel:descargar_documento' doc.id %}"
+    data-tipo="{{ etiqueta }}"
+    data-postulante="{{ inscripcion.postulante.nombre_completo }}"
+    data-numero="{{ inscripcion.numero_postulacion }} · {{ inscripcion.carrera.nombre }}"
+    data-estado="{{ doc.estado }}"
+    data-estado-texto="{{ doc.get_estado_display }}"
+    data-obs="{{ doc.observaciones }}"
+    data-accion="{% url 'panel:validar_documento' doc.id %}"
+    data-ficha="{% url 'panel:detalle_postulante' inscripcion.id %}">{{ texto|default:etiqueta }}</button>

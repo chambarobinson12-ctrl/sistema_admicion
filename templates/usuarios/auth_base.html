@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block nav %}{% if 'password_reset' not in request.resolver_match.url_name %}{{ block.super }}{% endif %}{% endblock %}
+{% block footer %}{% if 'password_reset' not in request.resolver_match.url_name %}{{ block.super }}{% endif %}{% endblock %}
+{% block chat %}{% if 'password_reset' not in request.resolver_match.url_name %}{{ block.super }}{% endif %}{% endblock %}
+{% block body_class %}{% if 'password_reset' in request.resolver_match.url_name %}auth-centrado{% endif %}{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+    <aside class="auth-lado">
+        <img src="{% static 'img/logotipo.jpg' %}" alt="Logo ISTAM" class="auth-logo">
+        <h2>Instituto Superior Tecnológico Amazónico</h2>
+        <p>Sistema de Admisión Estudiantil</p>
+        <ul class="auth-beneficios">
+            <li><span>✓</span> Postula a tu carrera 100% en línea</li>
+            <li><span>✓</span> Sube tus documentos desde cualquier lugar</li>
+            <li><span>✓</span> Revisa el estado de tu proceso en tiempo real</li>
+        </ul>
+    </aside>
+
+    <section class="auth-caja">
+        <div class="auth-icono">{% block auth_icono %}🔐{% endblock %}</div>
+        <h1 class="auth-titulo">{% block auth_titulo %}{% endblock %}</h1>
+        <p class="auth-subtitulo">{% block auth_subtitulo %}{% endblock %}</p>
+        {% block auth_cuerpo %}{% endblock %}
+        <div class="auth-pie">{% block auth_pie %}{% endblock %}</div>
+    </section>
+</div>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends 'panel/base_panel.html' %}
+{% block title %}{% if es_nueva %}Nueva carrera{% else %}Editar carrera{% endif %} - Panel administrativo{% endblock %}
+
+{% block panel_content %}
+    <div class="panel-breadcrumb">
+        <a href="{% url 'panel:carreras_lista' %}">Carreras</a> ›
+        <span class="actual">{% if es_nueva %}Nueva{% else %}Editar{% endif %}</span>
+    </div>
+
+    <div class="form-seccion" style="max-width:520px;">
+        <div class="form-seccion-titulo">
+            <span>{% if es_nueva %}Nueva carrera{% else %}Editar carrera{% endif %}</span>
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <label for="{{ form.nombre.id_for_label }}">Nombre de la carrera</label>
+            {{ form.nombre }}
+            {{ form.nombre.errors }}
+
+            <label for="{{ form.codigo.id_for_label }}">Código</label>
+            {{ form.codigo }}
+            {{ form.codigo.errors }}
+
+            <div class="checkbox-linea">
+                {{ form.activa }}
+                <label for="{{ form.activa.id_for_label }}">Carrera activa (visible para postulantes)</label>
+            </div>
+
+            <div class="form-pie" style="margin-top:20px;">
+                <a href="{% url 'panel:carreras_lista' %}" class="btn btn-secundario">Cancelar</a>
+                <button type="submit" class="btn">Guardar</button>
+            </div>
+        </form>
+    </div>
+{% endblock %}

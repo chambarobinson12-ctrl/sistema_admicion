@@ -1,0 +1,100 @@
+{% extends 'panel/base_panel.html' %}
+{% block title %}{% if es_nueva %}Nuevo proceso{% else %}Editar proceso{% endif %} - Panel administrativo{% endblock %}
+
+{% block panel_content %}
+    <div class="panel-breadcrumb">
+        <a href="{% url 'panel:convocatorias_lista' %}">Procesos de admisión</a> ›
+        <span class="actual">{% if es_nueva %}Nuevo{% else %}Editar{% endif %}</span>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        {% if origen %}<input type="hidden" name="origen" value="{{ origen.id }}">{% endif %}
+
+        <div class="form-seccion">
+            <div class="form-seccion-titulo">
+                <span class="form-seccion-numero">1</span>
+                <span>Datos del proceso</span>
+            </div>
+
+            <label for="{{ form.nombre.id_for_label }}">Nombre del proceso</label>
+            {{ form.nombre }}
+            {{ form.nombre.errors }}
+
+            <div class="form-grid-2">
+                <div>
+                    <label for="{{ form.fecha_inicio.id_for_label }}">Fecha de inicio</label>
+                    {{ form.fecha_inicio }}
+                    {{ form.fecha_inicio.errors }}
+                </div>
+                <div>
+                    <label for="{{ form.fecha_fin.id_for_label }}">Fecha de cierre</label>
+                    {{ form.fecha_fin }}
+                    {{ form.fecha_fin.errors }}
+                </div>
+            </div>
+
+            <div class="checkbox-linea">
+                {{ form.activa }}
+                <label for="{{ form.activa.id_for_label }}">Proceso activo (visible para postulantes en el sitio público)</label>
+            </div>
+        </div>
+
+        <div class="form-seccion">
+            <div class="form-seccion-titulo">
+                <span class="form-seccion-numero">2</span>
+                <span>Cupos por carrera</span>
+            </div>
+            <p class="campo-ayuda" style="margin-bottom:14px;">Elige una carrera y cuántos cupos tendrá dentro de este proceso. Estos cupos son los que ven los postulantes en "Postularme".</p>
+
+            {{ formset.management_form }}
+            <div id="cupos-filas">
+                {% for cupo_form in formset %}
+                    <div class="form-grid-2 cupo-fila" style="align-items:center; margin-bottom:8px;">
+                        <div>{{ cupo_form.id }}{{ cupo_form.carrera }}{{ cupo_form.carrera.errors }}</div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            {{ cupo_form.cupos }}
+                            {% if cupo_form.instance.pk %}
+                                <span class="campo-ayuda">{{ cupo_form.DELETE }} Eliminar</span>
+                            {% endif %}
+                        </div>
+                        {{ cupo_form.cupos.errors }}
+                    </div>
+                {% endfor %}
+            </div>
+            <button type="button" id="btn-agregar-cupo" class="btn-sm btn-secundario" style="margin-top:10px;">+ Agregar otra carrera</button>
+        </div>
+
+        <div class="form-pie" style="margin-bottom:40px;">
+            <a href="{% if origen %}{% url 'panel:convocatoria_detalle' origen.id %}{% else %}{% url 'panel:convocatorias_lista' %}{% endif %}" class="btn btn-secundario">Cancelar</a>
+            <button type="submit" class="btn">Guardar proceso</button>
+        </div>
+    </form>
+
+    <template id="plantilla-cupo-fila">
+        <div class="form-grid-2 cupo-fila" style="align-items:center; margin-bottom:8px;">
+            {{ formset.empty_form.carrera }}
+            <div style="display:flex; align-items:center; gap:10px;">
+                {{ formset.empty_form.cupos }}
+            </div>
+        </div>
+    </template>
+
+    <script>
+        (function () {
+            const totalFormsInput = document.querySelector('#id_cupocarrera_set-TOTAL_FORMS');
+            const contenedor = document.getElementById('cupos-filas');
+            const plantilla = document.getElementById('plantilla-cupo-fila');
+            const btnAgregar = document.getElementById('btn-agregar-cupo');
+
+            btnAgregar.addEventListener('click', () => {
+                const indice = parseInt(totalFormsInput.value, 10);
+                const html = plantilla.innerHTML.replace(/__prefix__/g, indice);
+                const envoltorio = document.createElement('div');
+                envoltorio.innerHTML = html.trim();
+                contenedor.appendChild(envoltorio.firstElementChild);
+                totalFormsInput.value = indice + 1;
+            });
+        })();
+    </script>
+{% endblock %}

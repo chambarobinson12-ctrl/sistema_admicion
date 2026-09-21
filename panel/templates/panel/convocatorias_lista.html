@@ -1,0 +1,60 @@
+{% extends 'panel/base_panel.html' %}
+{% block title %}Procesos de admisión - Panel administrativo{% endblock %}
+
+{% block panel_content %}
+    <div class="panel-topbar">
+        <div>
+            <h1>Procesos de admisión</h1>
+            <span class="panel-topbar-subtitulo">Convocatorias, fechas y cupos por carrera.</span>
+        </div>
+        <a href="{% url 'panel:convocatoria_crear' %}" class="btn">+ Nuevo proceso</a>
+    </div>
+
+    <div class="panel-tabla-card">
+        {% if convocatorias %}
+            <table class="tabla-postulantes">
+                <thead>
+                    <tr>
+                        <th>Proceso</th>
+                        <th>Fechas</th>
+                        <th>Cupos</th>
+                        <th>Estado</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for convocatoria in convocatorias %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'panel:convocatoria_detalle' convocatoria.id %}" class="fila-link">
+                                    {{ convocatoria.nombre }}
+                                    <span class="etiqueta-proceso {{ convocatoria.etiqueta_clase }}">{{ convocatoria.etiqueta }}</span>
+                                </a>
+                            </td>
+                            <td><a href="{% url 'panel:convocatoria_detalle' convocatoria.id %}" class="fila-link">{{ convocatoria.fecha_inicio|date:"d M Y" }} — {{ convocatoria.fecha_fin|date:"d M Y" }}</a></td>
+                            <td><a href="{% url 'panel:convocatoria_detalle' convocatoria.id %}" class="fila-link">{{ convocatoria.cupocarrera_set.count }} carrera(s)</a></td>
+                            <td>
+                                <div class="proceso-estado-celda">
+                                    <span class="badge {% if convocatoria.activa %}badge-exito{% else %}badge-alerta{% endif %}">
+                                        {% if convocatoria.activa %}Activa{% else %}Pausada{% endif %}
+                                    </span>
+                                    <form method="post" action="{% url 'panel:convocatoria_cambiar_estado' convocatoria.id %}" onsubmit="return confirm('{% if convocatoria.activa %}¿Pausar este proceso? Dejará de aparecer en Carreras.{% else %}¿Activar este proceso? Volverá a aparecer en Carreras.{% endif %}');">
+                                        {% csrf_token %}
+                                        {% if convocatoria.activa %}
+                                            <button type="submit" class="btn-sm btn-pausar">Pausar proceso</button>
+                                        {% else %}
+                                            <button type="submit" class="btn-sm">Activar proceso</button>
+                                        {% endif %}
+                                    </form>
+                                </div>
+                            </td>
+                            <td><a href="{% url 'panel:convocatoria_detalle' convocatoria.id %}" class="btn btn-sm btn-secundario">Ver</a></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="sin-resultados">Todavía no hay procesos de admisión registrados.</div>
+        {% endif %}
+    </div>
+{% endblock %}

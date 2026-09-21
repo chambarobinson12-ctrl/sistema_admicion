@@ -1,0 +1,19 @@
+{% extends 'usuarios/auth_base.html' %}
+{% block title %}Revisa tu correo - ISTAM Admisión{% endblock %}
+{% block auth_icono %}📧{% endblock %}
+{% block auth_titulo %}Revisa tu correo{% endblock %}
+{% block auth_subtitulo %}Si el correo que escribiste está registrado, en unos minutos te llegará un mensaje con el enlace para crear una nueva contraseña.{% endblock %}
+
+{% block auth_cuerpo %}
+    <div class="auth-nota">
+        <strong>¿No te llega?</strong>
+        <ul>
+            <li>Revisa la carpeta de <b>spam</b> o <b>correo no deseado</b>.</li>
+            <li>Confirma que sea el mismo correo con el que te registraste.</li>
+            <li>El enlace es válido por 24 horas y solo se puede usar una vez.</li>
+        </ul>
+    </div>
+    <a href="{% url 'password_reset' %}" class="btn btn-secundario btn-bloque">Enviar de nuevo</a>
+{% endblock %}
+
+{% block auth_pie %}<a href="{% url 'login' %}">&larr; Volver a iniciar sesión</a>{% endblock %}

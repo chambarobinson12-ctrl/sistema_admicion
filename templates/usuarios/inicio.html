@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Inicio - Instituto Superior Tecnológico Amazónico{% endblock %}
+
+{% block content %}
+    <div class="hero-panel">
+        <div class="hero-texto">
+            <span class="badge-proceso">Admisión 2026-I · Proceso activo</span>
+            <h1>Tu admisión al Instituto Superior Tecnológico Amazónico, paso a paso</h1>
+            <p>Regístrate, elige una de nuestras 4 carreras tecnológicas, sube tus documentos y da seguimiento a todo tu proceso de admisión desde un solo lugar.</p>
+            <div class="hero-cta">
+                {% if user.is_authenticated %}
+                    <a href="{% url 'mis_inscripciones' %}" class="btn hero-btn-primario">Ver mi Proceso</a>
+                {% else %}
+                    <a href="{% url 'registro' %}" class="btn hero-btn-primario">Regístrate ahora</a>
+                {% endif %}
+                <a href="{% url 'lista_carreras' %}" class="hero-btn-secundario">Ver carreras</a>
+            </div>
+        </div>
+        <div class="hero-logo">
+            <img src="{% static 'img/logotipo_color.png' %}" alt="Logo del Instituto Superior Tecnológico Amazónico">
+        </div>
+    </div>
+
+    <div class="stats-row">
+        <div class="stat-item">
+            <strong>4</strong>
+            <span>carreras tecnológicas</span>
+        </div>
+        <div class="stat-item">
+            <strong>2</strong>
+            <span>modalidad presencial</span>
+        </div>
+        <div class="stat-item">
+            <strong>0$</strong>
+            <span>costo de inscripción</span>
+        </div>
+        <div class="stat-item">
+            <strong>2</strong>
+            <span>modalidad en línea</span>
+        </div>
+    </div>
+
+    <h2 class="seccion-titulo">Explora nuestras carreras</h2>
+    <div class="preview-grid">
+        <a href="{% url 'lista_carreras' %}" class="preview-card">
+            <img src="{% static 'img/carreras/software.png' %}" alt="Desarrollo de Software">
+            <span>Desarrollo de Software</span>
+        </a>
+        <a href="{% url 'lista_carreras' %}" class="preview-card">
+            <img src="{% static 'img/carreras/contabilidad.png' %}" alt="Contabilidad">
+            <span>Contabilidad</span>
+        </a>
+        <a href="{% url 'lista_carreras' %}" class="preview-card">
+            <img src="{% static 'img/carreras/agropecuaria.png' %}" alt="Agropecuaria">
+            <span>Agropecuaria</span>
+        </a>
+        <a href="{% url 'lista_carreras' %}" class="preview-card">
+            <img src="{% static 'img/carreras/pecuaria.png' %}" alt="Pecuaria">
+            <span>Pecuaria</span>
+        </a>
+    </div>
+
+    <h2 class="seccion-titulo">Etapas de tu proceso de admisión</h2>
+    <div class="pasos-row">
+        <div class="paso-item">
+            <div class="paso-circulo">1</div>
+            <strong>Registro</strong>
+            <p>llena tus datos y sube tu certificado de registro </p>
+        </div>
+        <div class="paso-linea"></div>
+        <div class="paso-item">
+            <div class="paso-circulo">2</div>
+            <strong>Inscripción</strong>
+            <p>sube tu certificado de inscripcion del proceso de admicion</p>
+        </div>
+        <div class="paso-linea"></div>
+        <div class="paso-item">
+            <div class="paso-circulo">3</div>
+            <strong>Evaluacion</strong>
+            <p>rinde el examen y sube tu certificado de haber realizadotu Evaluacion</p>
+        </div>
+        <div class="paso-linea"></div>
+        <div class="paso-item">
+            <div class="paso-circulo">4</div>
+            <strong>Postulación</strong>
+            <p>postula a la carrera y sube tu certificado de postulacion</p>
+        </div>
+        <div class="paso-linea"></div>
+        <div class="paso-item">
+            <div class="paso-circulo">5</div>
+            <strong>Aceptación</strong>
+            <p>revisa stu Aceptación de cupo </p>
+        </div>
+    </div>
+{% endblock %}

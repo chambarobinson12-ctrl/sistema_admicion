@@ -1,0 +1,81 @@
+{% extends 'panel/base_panel.html' %}
+{% block title %}Revisión de documentos - Panel administrativo{% endblock %}
+
+{% block panel_content %}
+    <div class="panel-topbar">
+        <div>
+            <h1>Revisión de documentos</h1>
+            <span class="panel-topbar-subtitulo">
+                Todos los documentos de los postulantes en un solo lugar. Haz clic en cualquier documento para verlo aquí mismo, aprobarlo o rechazarlo.
+            </span>
+        </div>
+        <span class="badge badge-alerta" style="font-size:12.5px; padding:7px 12px;">{{ pendientes_total }} documento{{ pendientes_total|pluralize }} por revisar</span>
+    </div>
+
+    <div class="panel-tabla-card">
+        <form method="get" class="panel-filtros">
+            <input type="text" name="q" value="{{ filtro_q }}" placeholder="Buscar por nombre, cédula o N.° de postulación">
+            <select name="proceso">
+                {% for conv in convocatorias %}
+                    <option value="{{ conv.id }}" {% if filtro_proceso == conv.id|stringformat:"s" %}selected{% endif %}>{{ conv.nombre }}{% if conv.activa %} (activo){% endif %}</option>
+                {% endfor %}
+                <option value="todos" {% if filtro_proceso == 'todos' %}selected{% endif %}>Todos los procesos</option>
+            </select>
+            <select name="docs">
+                <option value="pendientes" {% if filtro_docs == 'pendientes' %}selected{% endif %}>Con documentos por revisar</option>
+                <option value="rechazados" {% if filtro_docs == 'rechazados' %}selected{% endif %}>Con documentos rechazados</option>
+                <option value="completos" {% if filtro_docs == 'completos' %}selected{% endif %}>Con todo validado</option>
+                <option value="todos" {% if filtro_docs == 'todos' %}selected{% endif %}>Todos los postulantes</option>
+            </select>
+            <button type="submit" class="btn-sm btn-secundario">Filtrar</button>
+        </form>
+
+        <div class="revision-leyenda">
+            <span><i class="punto punto-pendiente"></i> Por revisar</span>
+            <span><i class="punto punto-validado"></i> Validado</span>
+            <span><i class="punto punto-rechazado"></i> Rechazado</span>
+            <span><i class="punto punto-vacio"></i> No subido</span>
+        </div>
+
+        {% if pagina.object_list %}
+            <div class="revision-lista">
+                {% for inscripcion in pagina.object_list %}
+                    <div class="revision-fila">
+                        <a href="{% url 'panel:detalle_postulante' inscripcion.id %}" class="revision-postulante">
+                            <div class="avatar-circulo">{{ inscripcion.postulante.iniciales }}</div>
+                            <div>
+                                <span class="postulante-nombre">{{ inscripcion.postulante.nombre_completo }}</span>
+                                <span class="postulante-cedula">CI {{ inscripcion.postulante.usuario.cedula|default:"—" }} · {{ inscripcion.carrera.nombre }}</span>
+                                <span class="postulante-cedula">{{ inscripcion.docs_validados }}/{{ total_tipos }} validados · {{ inscripcion.get_estado_display }}</span>
+                            </div>
+                        </a>
+                        <div class="revision-docs">
+                            {% for item in inscripcion.docs_detalle %}
+                                {% if item.documento %}
+                                    {% include 'panel/_boton_doc.html' with doc=item.documento etiqueta=item.etiqueta inscripcion=inscripcion %}
+                                {% else %}
+                                    <span class="doc-chip doc-chip-vacio" title="El postulante aún no lo sube">{{ item.etiqueta }}</span>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="panel-paginacion">
+                <span>Mostrando {{ pagina.start_index }}–{{ pagina.end_index }} de {{ pagina.paginator.count }} postulantes</span>
+                <div class="paginas">
+                    {% if pagina.has_previous %}<a href="?pagina={{ pagina.previous_page_number }}&q={{ filtro_q }}&proceso={{ filtro_proceso }}&docs={{ filtro_docs }}">‹</a>{% endif %}
+                    <span class="pagina-actual">{{ pagina.number }}</span>
+                    {% if pagina.has_next %}<a href="?pagina={{ pagina.next_page_number }}&q={{ filtro_q }}&proceso={{ filtro_proceso }}&docs={{ filtro_docs }}">›</a>{% endif %}
+                </div>
+            </div>
+        {% else %}
+            <div class="sin-resultados">
+                {% if filtro_docs == 'pendientes' %}🎉 No hay documentos pendientes de revisión con estos filtros.{% else %}No se encontraron postulantes con esos filtros.{% endif %}
+            </div>
+        {% endif %}
+    </div>
+
+    {% include 'panel/_visor_documentos.html' %}
+{% endblock %}

@@ -1,0 +1,291 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Instituto Superior Tecnológico Amazónico - Admisión{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/estilos.css' %}">
+</head>
+<body class="{% block body_class %}{% endblock %}"></body>
+        {% block nav %}
+    <nav class="nav-menu">
+        <a href="{% url 'inicio' %}" class="brand-link">
+            <img src="{% static 'img/logotipo.jpg' %}" alt="Logo ISTAM" class="brand-logo">
+            <span class="brand-text">
+                <strong>Instituto Superior Tecnológico Amazónico</strong>
+                <small>Sistema de Admisión · ISTAM</small>
+            </span>
+        </a>
+
+               <div class="nav-links">
+            <a href="{% url 'inicio' %}" class="{% if request.resolver_match.url_name == 'inicio' %}active{% endif %}">Inicio</a>
+
+            {% if user.is_authenticated and user.is_staff or user.is_superuser or user.rol == 'admin_admision' %}
+                <a href="/panel/">Panel administrativo</a>
+            {% else %}
+                <a href="{% url 'lista_carreras' %}" class="{% if request.resolver_match.url_name == 'lista_carreras' %}active{% endif %}">Procesos</a>
+                {% if user.is_authenticated %}
+                    <a href="{% url 'mis_inscripciones' %}" class="{% if request.resolver_match.url_name == 'mis_inscripciones' or request.resolver_match.url_name == 'postular' %}active{% endif %}">Mi Proceso</a>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <div class="nav-right">
+            {% if user.is_authenticated %}
+                <span class="user-greeting">Hola, {{ user.username }}</span>
+                <a href="{% url 'password_change' %}" class="nav-secundario" title="Cambiar contraseña">🔒 Contraseña</a>
+                <form method="post" action="{% url 'logout' %}" class="logout-form">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-link">Cerrar sesión</button>
+                </form>
+            {% else %}
+                <a href="{% url 'login' %}">Iniciar sesión</a>
+                <a href="{% url 'registro' %}" class="nav-cta">Registrarse</a>
+            {% endif %}
+        </div>
+    </nav>
+        {% endblock %}
+
+    <main class="contenido">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="mensaje mensaje-{{ message.tags|default:'info' }}" role="status">
+                    <span>{{ message }}</span>
+                    <button type="button" class="mensaje-cerrar" aria-label="Cerrar aviso" onclick="this.parentElement.remove()">&times;</button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% block content %}
+        {% endblock %}
+    </main>
+
+        {% block footer %}
+    <footer class="footer">
+        <div class="footer-grid">
+            <div class="footer-col">
+                <strong>Instituto Superior Tecnológico Amazónico</strong>
+                <span>Av. Iván Riofrío, Yantzaza · Zamora Chinchipe, Ecuador</span>
+            </div>
+            <div class="footer-col">
+                <strong>Atención</strong>
+                <span>Lunes a viernes · 13h30 a 21h30</span>
+                <span>WhatsApp <a href="https://wa.me/593994778820" target="_blank" rel="noopener">+593 99 477 8820</a></span>
+            </div>
+            <div class="footer-col">
+                <strong>Accesos</strong>
+                <a href="{% url 'lista_carreras' %}">Carreras</a>
+                {% if user.is_authenticated %}<a href="{% url 'password_change' %}">Cambiar contraseña</a>{% else %}<a href="{% url 'password_reset' %}">Recuperar contraseña</a>{% endif %}
+            </div>
+        </div>
+        <p class="footer-copy">&copy; {% now "Y" %} Instituto Superior Tecnológico Amazónico · Sistema de Admisión Estudiantil</p>
+    </footer>
+        {% endblock %}
+
+            {% block chat %}
+    <!-- Widget flotante de chat de ayuda -->
+    <button id="btn-ayuda" class="help-fab" aria-label="Abrir chat de ayuda" title="¿Necesitas ayuda?">💬</button>
+
+    <div id="panel-ayuda" class="help-panel hidden">
+        <div class="help-panel-header">
+            <div class="help-bot-avatar">🤖</div>
+            <div>
+                <strong>Asistente ISTAM</strong>
+                <div class="help-status">En línea</div>
+            </div>
+            <button id="cerrar-ayuda" class="help-close" aria-label="Cerrar ayuda">&times;</button>
+        </div>
+
+        <div class="help-tabs">
+            <button type="button" class="help-tab activo" data-vista="chat">Chat</button>
+            <button type="button" class="help-tab" data-vista="ubicacion">Ubicación y contacto</button>
+        </div>
+
+        <div class="help-vista" data-vista-panel="chat">
+            <div class="help-panel-body" id="help-mensajes">
+                <div class="help-bubble">
+                    ¡Hola! 👋 Soy el asistente virtual del Instituto Superior Tecnológico Amazónico. Puedo ayudarte con dudas sobre el sistema de admisión (registro, subir documentos, estado de tu postulación) o sobre el proceso de acceso a la educación superior de SENECYT. ¿En qué te ayudo?
+                </div>
+            </div>
+            <div class="help-chips">
+                <button type="button" class="help-chip" data-pregunta="documentos">¿Qué documentos debo subir?</button>
+                <button type="button" class="help-chip" data-pregunta="estado">¿Cómo veo el estado de mi postulación?</button>
+                <button type="button" class="help-chip" data-pregunta="senecyt">¿Qué es el proceso de SENECYT?</button>
+                <button type="button" class="help-chip" data-pregunta="humano">Quiero hablar con una persona</button>
+            </div>
+            <form id="help-form" class="help-form">
+                <input type="text" id="help-input" placeholder="Escribe tu pregunta..." autocomplete="off">
+                <button type="submit" aria-label="Enviar">➤</button>
+            </form>
+        </div>
+
+        <div class="help-vista hidden" data-vista-panel="ubicacion">
+            <div class="help-ubicacion">
+                <div class="help-mapa-wrap">
+                    <iframe
+                        src="https://www.google.com/maps?q=Av.+Iv%C3%A1n+Riofr%C3%ADo,+Yantzaza,+Zamora+Chinchipe,+Ecuador&output=embed"
+                        loading="lazy"
+                        referrerpolicy="no-referrer-when-downgrade"
+                        title="Ubicación del Instituto Superior Tecnológico Amazónico"></iframe>
+                </div>
+                <div class="help-datos-contacto">
+                    <div class="help-dato">
+                        <span class="help-dato-icono">📍</span>
+                        <span class="help-dato-texto">
+                            <strong>Dirección</strong>
+                            Av. Iván Riofrío, entre 22 de Noviembre y 13 de Abril (Instalaciones del Colegio Primero de Mayo), Cantón Yantzaza, Zamora Chinchipe, Ecuador.
+                        </span>
+                    </div>
+                    <div class="help-dato">
+                        <span class="help-dato-icono">🕒</span>
+                        <span class="help-dato-texto">
+                            <strong>Horario de atención en instalaciones</strong>
+                            Lunes a viernes, de 13h30 a 21h30.
+                        </span>
+                    </div>
+                    <div class="help-dato">
+                        <span class="help-dato-icono">📱</span>
+                        <span class="help-dato-texto">
+                            <strong>WhatsApp / Celular</strong>
+                            <a href="https://wa.me/593994778820" target="_blank" rel="noopener">+593 99 477 8820</a>
+                        </span>
+                    </div>
+                    <div class="help-dato">
+                        <span class="help-dato-icono">☎️</span>
+                        <span class="help-dato-texto">
+                            <strong>Teléfono fijo</strong>
+                            +593 7-230-0262
+                        </span>
+                    </div>
+                    <div class="help-dato">
+                        <span class="help-dato-icono">🌐</span>
+                        <span class="help-dato-texto">
+                            <strong>Canales digitales</strong>
+                            Instagram <a href="https://instagram.com/ist_amazonico" target="_blank" rel="noopener">@ist_amazonico</a>
+                            · Facebook <a href="https://facebook.com/ISTAmazonico" target="_blank" rel="noopener">ISTAmazonico</a>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const btnAyuda = document.getElementById('btn-ayuda');
+        const panelAyuda = document.getElementById('panel-ayuda');
+        const cerrarAyuda = document.getElementById('cerrar-ayuda');
+        const mensajesEl = document.getElementById('help-mensajes');
+        const formEl = document.getElementById('help-form');
+        const inputEl = document.getElementById('help-input');
+        const tabs = panelAyuda.querySelectorAll('.help-tab');
+        const vistas = panelAyuda.querySelectorAll('.help-vista');
+
+        function abrirChat() {
+            panelAyuda.classList.remove('hidden');
+        }
+
+        function agregarMensaje(texto, esUsuario) {
+            const burbuja = document.createElement('div');
+            burbuja.className = 'help-bubble' + (esUsuario ? ' usuario' : '');
+            burbuja.textContent = texto;
+            mensajesEl.appendChild(burbuja);
+            mensajesEl.scrollTop = mensajesEl.scrollHeight;
+        }
+
+        const RESPUESTAS = {
+            documentos: 'Para completar tu postulación necesitas subir 4 documentos en "Mis documentos": cédula de identidad, certificado de votación, acta de grado o título de bachiller, y una foto tamaño carnet. Puedes subirlos o reemplazarlos las veces que necesites hasta que sean validados.',
+            estado: 'Entra a "Mis documentos" con tu usuario. Ahí verás tu número de postulación y el estado de cada documento (no cargado, pendiente de revisión, validado o rechazado), además del paso en que va tu proceso: Inscripción → Documentos → Evaluación → Aceptación.',
+            senecyt: 'SENECYT es la Secretaría de Educación Superior, Ciencia, Tecnología e Innovación del Ecuador. Define las etapas oficiales de acceso a la educación superior: Registro, Inscripción, Evaluación, Postulación, Aceptación y Matriculación. Este sistema usa ese mismo lenguaje para que sepas siempre en qué etapa estás.',
+            humano: 'Claro, puedes escribirnos directo por WhatsApp al +593 99 477 8820 o llamar al +593 7-230-0262, en horario de atención de lunes a viernes de 13h30 a 21h30. También puedes revisar la pestaña "Ubicación y contacto" de este chat.',
+        };
+
+        function responderPregunta(texto) {
+            const clave = texto.toLowerCase();
+            let respuesta = 'Gracias por tu mensaje. Para dudas puntuales sobre tu postulación o sobre SENECYT, prueba una de las preguntas rápidas de arriba, o contáctanos por WhatsApp al +593 99 477 8820 (pestaña "Ubicación y contacto").';
+            if (clave.includes('document')) respuesta = RESPUESTAS.documentos;
+            else if (clave.includes('estado') || clave.includes('postula')) respuesta = RESPUESTAS.estado;
+            else if (clave.includes('senecyt')) respuesta = RESPUESTAS.senecyt;
+            else if (clave.includes('humano') || clave.includes('persona') || clave.includes('asesor')) respuesta = RESPUESTAS.humano;
+            setTimeout(() => agregarMensaje(respuesta, false), 350);
+        }
+
+        btnAyuda.addEventListener('click', () => {
+            panelAyuda.classList.toggle('hidden');
+        });
+        cerrarAyuda.addEventListener('click', () => {
+            panelAyuda.classList.add('hidden');
+        });
+        document.addEventListener('click', (event) => {
+            const clickDentro = panelAyuda.contains(event.target) || btnAyuda.contains(event.target);
+            if (!clickDentro) {
+                panelAyuda.classList.add('hidden');
+            }
+        });
+
+        tabs.forEach((tab) => {
+            tab.addEventListener('click', () => {
+                tabs.forEach((t) => t.classList.remove('activo'));
+                tab.classList.add('activo');
+                const destino = tab.dataset.vista;
+                vistas.forEach((v) => {
+                    v.classList.toggle('hidden', v.dataset.vistaPanel !== destino);
+                });
+            });
+        });
+
+        panelAyuda.querySelectorAll('.help-chip').forEach((chip) => {
+            chip.addEventListener('click', () => {
+                agregarMensaje(chip.textContent, true);
+                responderPregunta(RESPUESTAS[chip.dataset.pregunta] ? chip.dataset.pregunta : chip.textContent);
+            });
+        });
+
+        formEl.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const texto = inputEl.value.trim();
+            if (!texto) return;
+            agregarMensaje(texto, true);
+            responderPregunta(texto);
+            inputEl.value = '';
+        });
+
+        if (new URLSearchParams(window.location.search).get('abrir_chat')) {
+            abrirChat();
+        }
+            </script>
+    {% endblock %}
+
+    <script>
+
+        // Botón "mostrar / ocultar" en todos los campos de contraseña
+        document.querySelectorAll('input[type="password"]').forEach((campo) => {
+            const envoltura = document.createElement('div');
+            envoltura.className = 'campo-pass';
+            campo.parentNode.insertBefore(envoltura, campo);
+            envoltura.appendChild(campo);
+            const boton = document.createElement('button');
+            boton.type = 'button';
+            boton.className = 'ver-pass';
+            boton.setAttribute('aria-label', 'Mostrar contraseña');
+            boton.textContent = 'Ver';
+            boton.addEventListener('click', () => {
+                const oculto = campo.type === 'password';
+                campo.type = oculto ? 'text' : 'password';
+                boton.textContent = oculto ? 'Ocultar' : 'Ver';
+                boton.setAttribute('aria-label', oculto ? 'Ocultar contraseña' : 'Mostrar contraseña');
+            });
+            envoltura.appendChild(boton);
+        });
+
+        // Los avisos de éxito se ocultan solos después de unos segundos
+        document.querySelectorAll('.mensaje-success').forEach((aviso) => {
+            setTimeout(() => aviso.classList.add('mensaje-saliendo'), 6000);
+            setTimeout(() => aviso.remove(), 6600);
+        });
+    </script>
+</body>
+</html>

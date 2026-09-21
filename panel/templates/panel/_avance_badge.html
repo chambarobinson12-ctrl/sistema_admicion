@@ -1,0 +1,12 @@
+{% comment %}Completo / Incompleto / Sin documentos, y qué le falta. Espera: inscripcion{% endcomment %}
+{% if inscripcion.avance == 'completo' %}
+    <span class="badge badge-exito">✓ Proceso completo</span>
+{% elif inscripcion.avance == 'vacio' %}
+    <span class="badge badge-neutro">Sin documentos</span>
+    <span class="postulante-cedula" style="display:block; margin-top:4px;">No ha subido nada todavía</span>
+{% else %}
+    <span class="badge badge-alerta">Incompleto</span>
+    <span class="postulante-cedula" style="display:block; margin-top:4px;">
+        {% for d in inscripcion.documentos_faltantes %}{% if d.situacion == 'rechazado' %}Volver a subir{% else %}Falta{% endif %}: {{ d.etiqueta|lower }}{% if not forloop.last %} · {% endif %}{% endfor %}
+    </span>
+{% endif %}

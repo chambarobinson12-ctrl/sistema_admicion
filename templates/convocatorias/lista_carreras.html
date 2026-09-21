@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Carreras - ISTAM Admisión{% endblock %}
+
+{% block content %}
+    <h1>Nuestras carreras</h1>
+    <p>El Instituto Superior Tecnológico Amazónico ofrece 4 carreras tecnológicas. Da clic en una tarjeta para ver el detalle completo.</p>
+
+    {% if convocatorias %}
+        {% for conv in convocatorias %}
+            <div class="convocatoria-bloque">
+                <h2>{{ conv.nombre }} <span class="etiqueta-proceso {{ conv.etiqueta_clase }}">{{ conv.etiqueta }}</span></h2>
+                <p class="convocatoria-fechas">Inscripciones del {{ conv.fecha_inicio|date:"d/m/Y" }} al {{ conv.fecha_fin|date:"d/m/Y" }}</p>
+
+                <div class="carreras-grid">
+                    {% for tarjeta in conv.tarjetas %}
+                        <div class="carrera-card{% if tarjeta.pausada %} carrera-pausada{% endif %}" data-modal="modal-{{ tarjeta.clave }}" tabindex="0" role="button">
+                            {% if tarjeta.info %}
+                                <div class="carrera-foto-wrap">
+                                    <img src="{% static tarjeta.info.imagen %}" alt="{{ tarjeta.carrera.nombre }}">
+                                    {% if tarjeta.pausada %}<span class="carrera-cupos-pill cerrada">Cupo cerrado</span>{% else %}<span class="carrera-cupos-pill">{{ tarjeta.cupos }} cupos</span>{% endif %}
+                                </div>
+                                <div class="carrera-info">
+                                    <h3>{{ tarjeta.carrera.nombre }}</h3>
+                                    <p class="carrera-descripcion">{{ tarjeta.info.resumen }}</p>
+                                    {% if tarjeta.pausada %}<span class="ver-mas ver-mas-cerrada">Cerrada por el momento</span>{% else %}<span class="ver-mas">Ver más de esta carrera →</span>{% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No hay convocatorias activas por el momento. Vuelve a revisar próximamente o contáctanos usando el chat de ayuda (ícono 💬 en la esquina inferior).</p>
+
+        <div class="carreras-grid">
+            <div class="carrera-card" data-modal="modal-software" tabindex="0" role="button">
+                <div class="carrera-foto-wrap">
+                    <img src="{% static 'img/carreras/software.png' %}" alt="Desarrollo de Software">
+                    <span class="carrera-cupos-pill cerrada">Cerrado</span>
+                </div>
+                <div class="carrera-info">
+                    <h3>Desarrollo de Software</h3>
+                    <p class="carrera-descripcion">{{ carreras_info.software.resumen }}</p>
+                    <span class="ver-mas">Ver más de esta carrera →</span>
+                </div>
+            </div>
+            <div class="carrera-card" data-modal="modal-contabilidad" tabindex="0" role="button">
+                <div class="carrera-foto-wrap">
+                    <img src="{% static 'img/carreras/contabilidad.png' %}" alt="Contabilidad">
+                    <span class="carrera-cupos-pill cerrada">Cerrado</span>
+                </div>
+                <div class="carrera-info">
+                    <h3>Contabilidad</h3>
+                    <p class="carrera-descripcion">{{ carreras_info.contabilidad.resumen }}</p>
+                    <span class="ver-mas">Ver más de esta carrera →</span>
+                </div>
+            </div>
+            <div class="carrera-card" data-modal="modal-agropecuaria" tabindex="0" role="button">
+                <div class="carrera-foto-wrap">
+                    <img src="{% static 'img/carreras/agropecuaria.png' %}" alt="Agropecuaria">
+                    <span class="carrera-cupos-pill cerrada">Cerrado</span>
+                </div>
+                <div class="carrera-info">
+                    <h3>Agropecuaria</h3>
+                    <p class="carrera-descripcion">{{ carreras_info.agropecuaria.resumen }}</p>
+                    <span class="ver-mas">Ver más de esta carrera →</span>
+                </div>
+            </div>
+            <div class="carrera-card" data-modal="modal-pecuaria" tabindex="0" role="button">
+                <div class="carrera-foto-wrap">
+                    <img src="{% static 'img/carreras/pecuaria.png' %}" alt="Pecuaria">
+                    <span class="carrera-cupos-pill cerrada">Cerrado</span>
+                </div>
+                <div class="carrera-info">
+                    <h3>Pecuaria</h3>
+                    <p class="carrera-descripcion">{{ carreras_info.pecuaria.resumen }}</p>
+                    <span class="ver-mas">Ver más de esta carrera →</span>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Modales de detalle por carrera -->
+    {% for clave, info in carreras_info.items %}
+        <div class="carrera-modal-overlay hidden" id="modal-{{ clave }}">
+            <div class="carrera-modal">
+                <button class="carrera-modal-close" aria-label="Cerrar">&times;</button>
+                <img src="{% static info.imagen %}" alt="" class="carrera-modal-img">
+                <div class="carrera-modal-body">
+                    <h2>{{ info.resumen|default:"" }}</h2>
+                    <div class="carrera-modal-meta">
+                        <span>⏱ {{ info.duracion }}</span>
+                        <span>📍 {{ info.modalidad }}</span>
+                    </div>
+
+                    <h4>Qué vas a aprender</h4>
+                    <ul>
+                        {% for punto in info.aprenderas %}
+                            <li>{{ punto }}</li>
+                        {% endfor %}
+                    </ul>
+
+                    <h4>A dónde puedes llegar</h4>
+                    <p>{{ info.salidas }}</p>
+
+                    {% if user.is_authenticated %}
+                        {% if info.carrera_id %}
+                            <form method="post" action="{% url 'iniciar_postulacion' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="carrera" value="{{ info.carrera_id }}">
+                                <button type="submit" class="btn carrera-modal-cta">Postularme a esta carrera</button>
+                            </form>
+                        {% else %}
+                            <p class="campo-ayuda" style="margin-top:16px;">Cupo cerrado: esta carrera no está abierta por el momento.</p>
+                        {% endif %}
+                    {% else %}
+                        <a href="{% url 'registro' %}" class="btn carrera-modal-cta">Crear cuenta para postularme</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+
+    <script>
+        document.querySelectorAll('.carrera-card').forEach(function(card) {
+            const abrir = function() {
+                const modalId = card.getAttribute('data-modal');
+                const modal = document.getElementById(modalId);
+                if (modal) {
+                    modal.classList.remove('hidden');
+                }
+            };
+            card.addEventListener('click', abrir);
+            card.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') abrir();
+            });
+        });
+
+        document.querySelectorAll('.carrera-modal-overlay').forEach(function(overlay) {
+            const cerrar = function() { overlay.classList.add('hidden'); };
+            overlay.querySelector('.carrera-modal-close').addEventListener('click', cerrar);
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) cerrar();
+            });
+        });
+    </script>
+{% endblock %}

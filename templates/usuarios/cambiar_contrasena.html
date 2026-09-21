@@ -1,0 +1,15 @@
+{% extends 'usuarios/auth_base.html' %}
+{% block title %}Cambiar contraseña - ISTAM Admisión{% endblock %}
+{% block auth_icono %}🔒{% endblock %}
+{% block auth_titulo %}Cambiar contraseña{% endblock %}
+{% block auth_subtitulo %}Por seguridad, primero escribe tu contraseña actual.{% endblock %}
+
+{% block auth_cuerpo %}
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {% include 'usuarios/_campos.html' %}
+        <button type="submit" class="btn-bloque">Guardar nueva contraseña</button>
+    </form>
+{% endblock %}
+
+{% block auth_pie %}<a href="{% url 'password_reset' %}">¿No recuerdas tu contraseña actual?</a>{% endblock %}

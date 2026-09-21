@@ -1,0 +1,16 @@
+{% if form.non_field_errors %}
+    <div class="alerta-form">
+        {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+    </div>
+{% endif %}
+{% for field in form %}
+    <div class="campo{% if field.errors %} campo-con-error{% endif %}">
+        {{ field.label_tag }}
+        {{ field }}
+        {% if field.errors %}
+            <ul class="errorlist">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+        {% elif field.help_text %}
+            <div class="campo-ayuda">{{ field.help_text|safe }}</div>
+        {% endif %}
+    </div>
+{% endfor %}

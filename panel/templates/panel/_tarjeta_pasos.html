@@ -1,0 +1,145 @@
+<div class="tarjeta config-pasos">
+
+    {# ---------- Resumen: lo único que se ve en Configuración ---------- #}
+    <div class="pasos-cabecera">
+        <div>
+            <span class="tarjeta-titulo">Proceso del postulante</span>
+            <p class="campo-ayuda">5 pasos · Lo que ve el postulante en "Mi proceso". Haz clic en un paso para editarlo.</p>
+        </div>
+        <button type="button" class="btn-sm btn-secundario" data-pasos-abrir="intro">Configurar</button>
+    </div>
+
+    <div class="pasos-lista">
+        {% for p in pasos %}
+            <div class="pasos-fila" data-pasos-abrir="{{ p.n }}" role="button" tabindex="0">
+                <span class="pasos-num">{{ p.n }}</span>
+                <span class="pasos-fila-texto">
+                    <strong data-resumen-nombre="paso{{ p.n }}_nombre">{{ p.nombre.value }}</strong>
+                    <span data-resumen-doc="paso{{ p.n }}_documento">{{ p.documento.value }}</span>
+                </span>
+                <span class="pasos-flecha" aria-hidden="true">›</span>
+            </div>
+        {% endfor %}
+    </div>
+
+    {# ---------- Ventana emergente con el formulario completo ---------- #}
+    <form method="post" action="{% url 'panel:config_pasos_guardar' %}" id="pasos-form">
+        {% csrf_token %}
+
+        <div class="pasos-overlay" id="pasos-ventana">
+            <div class="pasos-ventana" role="dialog" aria-modal="true" aria-labelledby="pasos-ventana-titulo">
+
+                <div class="pasos-ventana-cab">
+                    <h3 id="pasos-ventana-titulo">Configurar proceso del postulante</h3>
+                    <button type="button" class="pasos-x" data-pasos-cerrar aria-label="Cerrar">&times;</button>
+                </div>
+
+                <div class="pasos-ventana-cuerpo">
+                    <nav class="pasos-menu" aria-label="Pasos">
+                        <button type="button" class="pasos-tab" data-pasos-tab="intro">Introducción</button>
+                        {% for p in pasos %}
+                            <button type="button" class="pasos-tab" data-pasos-tab="{{ p.n }}">
+                                <span class="pasos-num">{{ p.n }}</span>
+                                <span data-tab-nombre="paso{{ p.n }}_nombre">{{ p.nombre.value }}</span>
+                            </button>
+                        {% endfor %}
+                    </nav>
+
+                    <div class="pasos-paneles">
+                        <div class="pasos-panel" data-pasos-panel="intro">
+                            <h4>Texto de introducción</h4>
+                            <label for="{{ form_pasos.descripcion.id_for_label }}">Lo primero que lee el postulante</label>
+                            {{ form_pasos.descripcion }}
+                        </div>
+
+                        {% for p in pasos %}
+                            <div class="pasos-panel" data-pasos-panel="{{ p.n }}">
+                                <h4>Paso {{ p.n }}</h4>
+                                <label for="{{ p.nombre.id_for_label }}">Nombre del paso</label>
+                                {{ p.nombre }}
+                                <label for="{{ p.documento.id_for_label }}">Documento que debe subir</label>
+                                {{ p.documento }}
+                                <label for="{{ p.ayuda.id_for_label }}">Indicaciones (opcional)</label>
+                                {{ p.ayuda }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="pasos-ventana-pie">
+                    <button type="button" class="btn-sm btn-secundario" data-pasos-cerrar>Cancelar</button>
+                    <button type="submit" class="btn btn-sm">Guardar cambios</button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+<script>
+(function () {
+    var ventana = document.getElementById('pasos-ventana');
+    if (!ventana) return;
+
+    var tabs = ventana.querySelectorAll('[data-pasos-tab]');
+    var paneles = ventana.querySelectorAll('[data-pasos-panel]');
+    var campos = ventana.querySelectorAll('input[type="text"], textarea');
+    var copia = [];
+
+    function mostrar(clave) {
+        tabs.forEach(function (t) {
+            t.classList.toggle('activo', t.getAttribute('data-pasos-tab') === clave);
+        });
+        paneles.forEach(function (p) {
+            p.classList.toggle('activo', p.getAttribute('data-pasos-panel') === clave);
+        });
+    }
+
+    function sincronizar() {
+        ventana.querySelectorAll('input[name$="_nombre"], input[name$="_documento"]').forEach(function (inp) {
+            var n = inp.name;
+            var r1 = document.querySelector('[data-resumen-nombre="' + n + '"]');
+            var r2 = document.querySelector('[data-resumen-doc="' + n + '"]');
+            var r3 = ventana.querySelector('[data-tab-nombre="' + n + '"]');
+            if (r1) r1.textContent = inp.value;
+            if (r2) r2.textContent = inp.value;
+            if (r3) r3.textContent = inp.value;
+        });
+    }
+
+    function abrir(clave) {
+        copia = Array.prototype.map.call(campos, function (c) { return c.value; });
+        ventana.classList.add('abierto');
+        document.body.style.overflow = 'hidden';
+        mostrar(clave);
+    }
+
+    function cerrar() {
+        campos.forEach(function (c, i) { c.value = copia[i]; });
+        sincronizar();
+        ventana.classList.remove('abierto');
+        document.body.style.overflow = '';
+    }
+
+    document.querySelectorAll('[data-pasos-abrir]').forEach(function (el) {
+        var clave = el.getAttribute('data-pasos-abrir');
+        el.addEventListener('click', function () { abrir(clave); });
+        el.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrir(clave); }
+        });
+    });
+
+    tabs.forEach(function (t) {
+        t.addEventListener('click', function () { mostrar(t.getAttribute('data-pasos-tab')); });
+    });
+
+    ventana.querySelectorAll('[data-pasos-cerrar]').forEach(function (b) {
+        b.addEventListener('click', cerrar);
+    });
+    ventana.addEventListener('click', function (e) { if (e.target === ventana) cerrar(); });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && ventana.classList.contains('abierto')) cerrar();
+    });
+
+    ventana.addEventListener('input', sincronizar);
+})();
+</script>
+</div>

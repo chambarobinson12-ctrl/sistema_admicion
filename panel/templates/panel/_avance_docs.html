@@ -1,0 +1,12 @@
+{% comment %}Documentos subidos por el postulante con su check. Espera: inscripcion{% endcomment %}
+<span style="display:flex; flex-wrap:wrap; gap:5px;">
+    {% for d in inscripcion.avance_documentos %}
+        {% if d.situacion == 'subido' %}
+            <span class="badge badge-exito" title="{{ d.etiqueta }}: subido">✓ {{ d.corto }}</span>
+        {% elif d.situacion == 'rechazado' %}
+            <span class="badge badge-peligro" title="{{ d.etiqueta }}: debe volver a subirlo{% if d.documento.observaciones %} ({{ d.documento.observaciones }}){% endif %}">✗ {{ d.corto }}</span>
+        {% else %}
+            <span class="badge badge-neutro" title="{{ d.etiqueta }}: no lo ha subido">○ {{ d.corto }}</span>
+        {% endif %}
+    {% endfor %}
+</span>

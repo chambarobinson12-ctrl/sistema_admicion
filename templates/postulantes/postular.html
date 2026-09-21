@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% block title %}Registro de postulación - Instituto Superior Tecnológico Amazónico{% endblock %}
+
+{% block content %}
+        <div class="etapas-postular">
+        <h2 class="seccion-titulo">Etapas de tu proceso de admisión</h2>
+        <div class="pasos-row">
+            <div class="paso-item paso-hecho">
+                <div class="paso-circulo">✓</div>
+                <strong>Registro</strong>
+                <p>Crea tu cuenta con tus datos personales en unos minutos.</p>
+            </div>
+            <div class="paso-linea paso-linea-hecha"></div>
+
+            <div class="paso-item paso-actual">
+                <div class="paso-circulo">2</div>
+                <strong>Inscripción</strong>
+                <p>Postúlate a la carrera de tu preferencia dentro del proceso activo.</p>
+            </div>
+            <div class="paso-linea"></div>
+
+            <div class="paso-item paso-pendiente">
+                <div class="paso-circulo">3</div>
+                <strong>Evaluación</strong>
+                <p>Cédula, certificado de votación, título de bachiller y foto, todo desde la plataforma.</p>
+            </div>
+            <div class="paso-linea"></div>
+
+            <div class="paso-item paso-pendiente">
+                <div class="paso-circulo">4</div>
+                <strong>Postulación</strong>
+                <p>Rinde el examen de admisión en la fecha asignada.</p>
+            </div>
+            <div class="paso-linea"></div>
+
+            <div class="paso-item paso-pendiente">
+                <div class="paso-circulo">5</div>
+                <strong>Aceptación</strong>
+                <p>Conoce el resultado de tu postulación en "Mi proceso".</p>
+            </div>
+        </div>
+    </div>
+    <div class="postular-cabecera">
+        <span class="badge-proceso">{{ convocatoria.nombre }} · Proceso activo</span>
+        <h1>Registro de postulación</h1>
+        <p>Completa tus datos personales y elige la carrera a la que deseas postular. Después de registrarte podrás subir y dar seguimiento a tus documentos. El proceso cierra el {{ convocatoria.fecha_fin|date:"d \d\e F \d\e Y" }}.</p>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" style="max-width:760px; margin:24px auto 0;">
+        {% csrf_token %}
+
+        <div class="form-seccion" data-paso="1">
+            <div class="form-seccion-titulo">
+                <span class="form-seccion-numero">1</span>
+                <span>Datos personales</span>
+            </div>
+
+            <div class="form-grid-2">
+                <div>{{ form.nombres.label_tag }}{{ form.nombres }}{{ form.nombres.errors }}</div>
+                <div>{{ form.apellidos.label_tag }}{{ form.apellidos }}{{ form.apellidos.errors }}</div>
+                <div>{{ form.fecha_nacimiento.label_tag }}{{ form.fecha_nacimiento }}{{ form.fecha_nacimiento.errors }}</div>
+                <div>{{ form.genero.label_tag }}{{ form.genero }}{{ form.genero.errors }}</div>
+                <div>{{ form.telefono.label_tag }}{{ form.telefono }}{{ form.telefono.errors }}</div>
+                <div>{{ form.colegio_procedencia.label_tag }}{{ form.colegio_procedencia }}{{ form.colegio_procedencia.errors }}</div>
+                <div style="grid-column:1 / -1;">{{ form.direccion.label_tag }}{{ form.direccion }}{{ form.direccion.errors }}</div>
+                <div style="grid-column:1 / -1;">
+                    <label for="{{ form.foto.id_for_label }}">certificado de registo unico:</label>
+                        <span class="campo-ayuda" style="display:block; margin-bottom:6px;">PDF, Word, Excel, PowerPoint o imagen (máximo 8 MB).</span>
+                    {{ form.foto }}{{ form.foto.errors }}
+                </div>
+            </div>
+
+            <div class="wizard-botones">
+                <span></span>
+                <button type="button" data-siguiente>Continuar</button>
+            </div>
+        </div>
+
+        <div class="form-seccion" data-paso="2">
+            <div class="form-seccion-titulo">
+                <span class="form-seccion-numero">2</span>
+                <span>Seleccion de tu carrera de interes </span>
+            </div>
+            <p class="campo-ayuda" style="margin-bottom:4px;">Proceso: <strong style="color:var(--texto);">{{ convocatoria.nombre }}</strong> · Puedes postular a una sola carrera por proceso</p>
+            {{ form.carrera.errors }}
+
+            <div class="carreras-opciones">
+                {% for choice in form.carrera %}
+                    <label class="carrera-opcion">
+                        {{ choice.tag }}
+                        <span class="carrera-opcion-texto">
+                            <span class="carrera-opcion-nombre">{{ choice.choice_label }}</span>
+                            {% for cupo in cupos_por_carrera %}
+                                {% if cupo.carrera_id|stringformat:"s" == choice.data.value %}
+                                    <span class="carrera-opcion-cupos">{{ cupo.cupos }} cupos disponibles</span>
+                                {% endif %}
+                            {% endfor %}
+                        </span>
+                    </label>
+                {% endfor %}
+            </div>
+
+            <div class="wizard-botones">
+                <button type="button" class="btn-secundario" data-atras>Volver atrás</button>
+                <button type="button" data-siguiente>Continuar</button>
+            </div>
+        </div>
+
+        <div class="form-seccion" data-paso="3">
+            <div class="form-seccion-titulo">
+                <span class="form-seccion-numero">3</span>
+                <span>Confirmación</span>
+            </div>
+
+            <div class="checkbox-linea">
+                {{ form.acepto_terminos }}
+                {{ form.acepto_terminos.label_tag }}
+            </div>
+            {{ form.acepto_terminos.errors }}
+
+            <p class="campo-ayuda" style="margin-top:16px;">Recibirás un número de postulación y podrás subir y dar seguimiento a tus documentos en "Mis documentos".</p>
+
+            <div class="wizard-botones">
+                <button type="button" class="btn-secundario" data-atras>Volver atrás</button>
+                <button type="submit">Registrar mis datos</button>
+            </div>
+        </div>
+    </form>
+
+    <script>
+        (function () {
+            var pasos = Array.prototype.slice.call(document.querySelectorAll('.form-seccion[data-paso]'));
+            if (!pasos.length) return;
+            var actual = 0;
+
+            function mostrar(indice, sinDesplazar) {
+                actual = indice;
+                pasos.forEach(function (p, i) { p.hidden = i !== indice; });
+                if (!sinDesplazar) {
+                    pasos[indice].scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }
+
+            function esValido(paso) {
+                var campos = paso.querySelectorAll('input, select, textarea');
+                for (var i = 0; i < campos.length; i++) {
+                    if (!campos[i].checkValidity()) {
+                        campos[i].reportValidity();
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            document.querySelectorAll('[data-siguiente]').forEach(function (boton) {
+                boton.addEventListener('click', function () {
+                    if (esValido(pasos[actual]) && actual < pasos.length - 1) mostrar(actual + 1);
+                });
+            });
+
+            document.querySelectorAll('[data-atras]').forEach(function (boton) {
+                boton.addEventListener('click', function () {
+                    if (actual > 0) mostrar(actual - 1);
+                });
+            });
+
+            var conError = pasos.findIndex(function (p) { return p.querySelector('.errorlist'); });
+            mostrar(conError >= 0 ? conError : 0, true);
+        })();
+    </script>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends 'usuarios/auth_base.html' %}
+{% block title %}Recuperar contraseña - ISTAM Admisión{% endblock %}
+{% block auth_icono %}🔑{% endblock %}
+{% block auth_titulo %}¿Olvidaste tu contraseña?{% endblock %}
+{% block auth_subtitulo %}No te preocupes. Escribe el correo con el que te registraste y te enviaremos un enlace para crear una nueva.{% endblock %}
+
+{% block auth_cuerpo %}
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {% include 'usuarios/_campos.html' %}
+        <button type="submit" class="btn-bloque">Enviar enlace de recuperación</button>
+    </form>
+{% endblock %}
+
+{% block auth_pie %}<a href="{% url 'login' %}">&larr; Volver a iniciar sesión</a>{% endblock %}

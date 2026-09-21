@@ -1,0 +1,19 @@
+{% extends 'usuarios/auth_base.html' %}
+{% block title %}Nueva contraseña - ISTAM Admisión{% endblock %}
+{% block auth_icono %}{% if validlink %}🔒{% else %}⚠️{% endif %}{% endblock %}
+{% block auth_titulo %}{% if validlink %}Crea tu nueva contraseña{% else %}Enlace no válido{% endif %}{% endblock %}
+{% block auth_subtitulo %}{% if validlink %}Hola <strong>{{ form.user.username }}</strong>, escribe tu nueva contraseña dos veces para confirmarla.{% else %}Este enlace ya fue usado o caducó. Solicita uno nuevo para recuperar tu contraseña.{% endif %}{% endblock %}
+
+{% block auth_cuerpo %}
+    {% if validlink %}
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {% include 'usuarios/_campos.html' %}
+            <button type="submit" class="btn-bloque">Guardar nueva contraseña</button>
+        </form>
+    {% else %}
+        <a href="{% url 'password_reset' %}" class="btn btn-bloque">Solicitar un nuevo enlace</a>
+    {% endif %}
+{% endblock %}
+
+{% block auth_pie %}<a href="{% url 'login' %}">&larr; Volver a iniciar sesión</a>{% endblock %}

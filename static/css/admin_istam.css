@@ -1,0 +1,71 @@
+:root, html[data-theme="dark"], html[data-theme="light"] {
+  color-scheme: light;
+  --primary: #4338ca;
+  --primary-fg: #fff;
+  --link-fg: #4338ca;
+  --link-hover-color: #3730a3;
+  --link-selected-fg: #3730a3;
+  --header-bg: #4338ca;
+  --header-color: #fff;
+  --header-branding-color: #fff;
+  --header-link-color: #fff;
+  --breadcrumbs-bg: #3730a3;
+  --breadcrumbs-fg: #e0e0fb;
+  --breadcrumbs-link-fg: #fff;
+  --button-bg: #4338ca;
+  --button-hover-bg: #3730a3;
+  --default-button-bg: #4338ca;
+  --default-button-hover-bg: #3730a3;
+  --object-tools-bg: #4338ca;
+  --object-tools-hover-bg: #3730a3;
+  --body-fg: #24263e;
+  --body-bg: #fff;
+  --body-quiet-color: #66687f;
+  --darkened-bg: #f7f7fb;
+  --selected-bg: #eeeefc;
+  --selected-row: #fff8e1;
+  --font-family-primary: 'Public Sans', -apple-system, "Segoe UI", Arial, sans-serif;
+}
+
+body {
+  font-family: 'Public Sans', -apple-system, "Segoe UI", Arial, sans-serif;
+}
+
+#header {
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+}
+
+#branding h1 {
+  font-weight: 800;
+}
+
+#branding a#site-name:link, #branding a#site-name:visited,
+#branding h1 a:link, #branding h1 a:visited {
+  color: #fff;
+}
+
+div.breadcrumbs {
+  font-size: 12.5px;
+}
+
+.module h2, .module caption, .inline-group h2 {
+  background: #4338ca;
+}
+
+a:link, a:visited {
+  color: #4338ca;
+}
+
+.button, input[type=submit], input[type=button], .submit-row input, a.button {
+  background: #4338ca;
+}
+
+.button:hover, input[type=submit]:hover, input[type=button]:hover {
+  background: #3730a3;
+}
+
+.object-tools a.addlink {
+  background-color: #4338ca;
+}

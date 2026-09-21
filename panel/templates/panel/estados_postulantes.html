@@ -1,0 +1,91 @@
+{% extends 'panel/base_panel.html' %}
+{% block title %}Revisar y comentar - Panel administrativo{% endblock %}
+
+{% block panel_content %}
+    <div class="panel-breadcrumb">
+        <a href="{% url 'panel:configuracion' %}">← Configuración</a>
+        <span>/</span>
+        <span class="actual">Revisar y comentar</span>
+    </div>
+
+    <div class="panel-topbar">
+        <div>
+            <h1>Revisar y comentar</h1>
+            <span class="panel-topbar-subtitulo">Revisa qué pasos completó cada postulante y envíale un comentario si dejó alguno en blanco.</span>
+        </div>
+    </div>
+
+    <div class="panel-tabla-card">
+        <form method="get" class="panel-filtros">
+            <input type="text" name="q" value="{{ filtro_q }}" placeholder="Buscar por nombre, cédula o N.° de postulación">
+            <select name="proceso" style="width:auto;">
+                {% for conv in convocatorias %}
+                    <option value="{{ conv.id }}" {% if filtro_proceso == conv.id|stringformat:"s" %}selected{% endif %}>{{ conv.nombre }}{% if conv.activa %} (activo){% endif %}</option>
+                {% endfor %}
+                <option value="todos" {% if filtro_proceso == 'todos' %}selected{% endif %}>Todos los procesos</option>
+            </select>
+            <select name="avance" style="width:auto;">
+                <option value="">Proceso: Todos</option>
+                <option value="incompleto" {% if filtro_avance == 'incompleto' %}selected{% endif %}>Proceso incompleto</option>
+                <option value="completo" {% if filtro_avance == 'completo' %}selected{% endif %}>Proceso completo</option>
+            </select>
+            <button type="submit" class="btn-sm btn-secundario">Filtrar</button>
+        </form>
+
+        {% if pagina.object_list %}
+            <div class="tabla-scroll">
+                <table class="tabla-postulantes">
+                    <thead>
+                        <tr>
+                            <th>Postulante</th>
+                            <th>Pasos completados</th>
+                            <th>Revisar</th>
+                            <th style="min-width:300px;">Comentario para el postulante</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for inscripcion in pagina.object_list %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'panel:detalle_postulante' inscripcion.id %}" class="fila-link">
+                                        <span class="postulante-nombre">{{ inscripcion.postulante.nombre_completo }}</span>
+                                        <span class="postulante-cedula" style="display:block;">{{ inscripcion.numero_postulacion }} · {{ inscripcion.carrera.nombre }}</span>
+                                    </a>
+                                </td>
+                                <td>{% include 'panel/_avance_docs.html' %}</td>
+                                <td>
+                                    {% include 'panel/_avance_badge.html' %}
+                                    <a href="{% url 'panel:detalle_postulante' inscripcion.id %}" class="link-ver-doc" style="display:inline-block; margin-top:4px;">Ver documentos →</a>
+                                </td>
+                                <td>
+                                    <form method="post" action="{% url 'panel:enviar_comentario' inscripcion.id %}" style="display:flex; flex-direction:column; gap:6px; margin:0;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                        <textarea name="comentario" rows="3" class="doc-observaciones-input" style="margin:0;" placeholder="Ej. No subiste el certificado de inscripción, por eso tu proceso está incompleto.">{{ inscripcion.comentario_sugerido }}</textarea>
+                                        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                                            <span class="postulante-cedula">
+                                                {% if inscripcion.fecha_comentario %}Último enviado: {{ inscripcion.fecha_comentario|date:"d M Y, H:i" }}{% else %}Sin comentarios enviados{% endif %}
+                                            </span>
+                                            <button type="submit" class="btn-sm">Enviar comentario</button>
+                                        </div>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="panel-paginacion">
+                <span>Mostrando {{ pagina.start_index }}–{{ pagina.end_index }} de {{ pagina.paginator.count }} postulantes</span>
+                <div class="paginas">
+                    {% if pagina.has_previous %}<a href="?pagina={{ pagina.previous_page_number }}&q={{ filtro_q }}&proceso={{ filtro_proceso }}&avance={{ filtro_avance }}">‹</a>{% endif %}
+                    <span class="pagina-actual">{{ pagina.number }}</span>
+                    {% if pagina.has_next %}<a href="?pagina={{ pagina.next_page_number }}&q={{ filtro_q }}&proceso={{ filtro_proceso }}&avance={{ filtro_avance }}">›</a>{% endif %}
+                </div>
+            </div>
+        {% else %}
+            <div class="sin-resultados">No se encontraron postulantes con esos filtros.</div>
+        {% endif %}
+    </div>
+{% endblock %}

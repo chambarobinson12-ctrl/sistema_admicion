@@ -1,0 +1,205 @@
+{% extends 'panel/base_panel.html' %}
+{% block title %}{{ convocatoria.nombre }} - Panel administrativo{% endblock %}
+
+{% block panel_content %}
+    <div class="panel-breadcrumb">
+        <a href="{% url 'panel:convocatorias_lista' %}">Procesos de admisión</a> ›
+        <span class="actual">{{ convocatoria.nombre }}</span>
+    </div>
+        <div class="panel-proceso panel-proceso-{{ estado_proceso.clase }}">
+        <div>
+            <div class="panel-proceso-titulo">{{ estado_proceso.titulo }}</div>
+            <div class="panel-proceso-texto">{{ estado_proceso.texto }}</div>
+        </div>
+        <div class="panel-proceso-derecha">
+            <div class="panel-proceso-numero">{{ estado_proceso.numero }}</div>
+            <div class="panel-proceso-unidad">{{ estado_proceso.unidad }}</div>
+        </div>
+    </div>
+    <div class="panel-topbar">
+        <div>
+            <h1>{{ convocatoria.nombre }}</h1>
+            <span class="panel-topbar-subtitulo">
+                Del {{ convocatoria.fecha_inicio|date:"d M Y" }} al {{ convocatoria.fecha_fin|date:"d M Y" }}
+                · {% if convocatoria.activa %}Activa{% else %}Cerrada{% endif %}
+            </span>
+        </div>
+        <a href="{% url 'panel:convocatoria_editar' convocatoria.id %}" class="btn-sm btn-secundario">Editar este proceso</a>
+    </div>
+
+    <div class="stat-cards">
+        <div class="stat-card">
+            <span class="stat-card-titulo">Postulantes</span>
+            <span class="stat-card-valor">{{ resumen.postulantes }}</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-card-titulo">Proceso completo</span>
+            <span class="stat-card-valor" style="color:var(--exito-texto);">{{ resumen.completos }}</span>
+            <span class="stat-card-nota positiva">✓ Subieron todos sus documentos</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-card-titulo">Incompleto</span>
+            <span class="stat-card-valor" style="color:var(--alerta-texto);">{{ resumen.incompletos }}</span>
+            <span class="stat-card-nota">{{ resumen.vacios }} sin ningún documento</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-card-titulo">Por reintegrar</span>
+            <span class="stat-card-valor">{{ pendientes_reintegrar }}</span>
+            <span class="stat-card-nota">{% if destino %}a "{{ destino.nombre }}"{% else %}Sin proceso destino{% endif %}</span>
+        </div>
+    </div>
+
+    {% if resumen.por_carrera %}
+        <div class="panel-tabla-card">
+            <table class="tabla-postulantes">
+                <thead>
+                    <tr>
+                        <th>Carrera</th>
+                        <th>Cupos</th>
+                        <th>Postulantes</th>
+                        <th>Proceso completo</th>
+                        <th>Incompleto</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fila in resumen.por_carrera %}
+                        <tr>
+                            <td>{{ fila.carrera.nombre }}</td>
+                            <td>{{ fila.cupos }}</td>
+                            <td>{{ fila.postulantes }}</td>
+                            <td><span class="badge badge-exito">{{ fila.completos }}</span></td>
+                            <td><span class="badge {% if fila.incompletos %}badge-alerta{% else %}badge-neutro{% endif %}">{{ fila.incompletos }}</span></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+
+    {# Barra para elegir a qué proceso se reintegra: proceso actual o proceso nuevo #}
+    <div class="tarjeta" style="background:var(--primario-suave); border-color:var(--acento-suave-2);">
+        <span class="tarjeta-titulo">Reintegrar a los estudiantes que no completaron el proceso</span>
+        <div style="display:flex; flex-wrap:wrap; align-items:center; gap:10px;">
+            <form method="get" style="display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:0;">
+                {% if filtro_carrera %}<input type="hidden" name="carrera" value="{{ filtro_carrera }}">{% endif %}
+                <label for="destino-select" style="margin:0; font-weight:700; font-size:13px;">Proceso actual:</label>
+                <select id="destino-select" name="destino" onchange="this.form.submit()" style="width:auto; max-width:100%; padding:8px 12px; border:1px solid var(--borde); border-radius:8px; font-size:13px; font-weight:600; background:#fff;">
+                    {% for d in destinos %}
+                        <option value="{{ d.id }}" {% if destino and d.id == destino.id %}selected{% endif %}>
+                            {{ d.nombre }} ({{ d.fecha_inicio|date:"d M Y" }} – {{ d.fecha_fin|date:"d M Y" }}){% if d.activa %} · Activa{% endif %}
+                        </option>
+                    {% empty %}
+                        <option value="">No hay otro proceso</option>
+                    {% endfor %}
+                </select>
+            </form>
+            <span class="campo-ayuda" style="margin:0;">o</span>
+            <a href="{% url 'panel:convocatoria_crear' %}?origen={{ convocatoria.id }}" class="btn-sm btn">+ Nuevo proceso</a>
+        </div>
+        <p class="campo-ayuda" style="margin-top:10px;">
+Se crea una inscripción nueva en el proceso elegido, con la misma carrera. El estudiante empieza otra vez desde el paso 1 y vuelve a subir sus documentos. La inscripción de este proceso se conserva como historial.
+        </p>
+    </div>
+
+    <div class="panel-tabla-card">
+        <form method="get" class="panel-filtros">
+            {% if destino %}<input type="hidden" name="destino" value="{{ destino.id }}">{% endif %}
+            <strong style="font-size:13.5px; margin-right:auto;">Estudiantes que no completaron el proceso ({{ quedados|length }})</strong>
+            <select name="carrera" style="width:auto;">
+                <option value="">Carrera: Todas</option>
+                {% for carrera in carreras %}
+                    <option value="{{ carrera.id }}" {% if filtro_carrera == carrera.id|stringformat:"s" %}selected{% endif %}>{{ carrera.nombre }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn-sm btn-secundario">Filtrar</button>
+        </form>
+
+        {% if quedados %}
+            <form method="post" action="{% url 'panel:reintegrar_postulantes' convocatoria.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="destino" value="{{ destino.id|default:'' }}">
+                <table class="tabla-postulantes">
+                    <thead>
+                        <tr>
+                            <th style="width:40px;"><input type="checkbox" id="marcar-todos" title="Seleccionar todos" style="accent-color:var(--primario);"></th>
+                            <th>Estudiante</th>
+                            <th>Carrera</th>
+                            <th>Documentos subidos</th>
+                            <th>Qué le falta</th>
+                            <th>{% if destino %}En "{{ destino.nombre }}"{% else %}Proceso destino{% endif %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for inscripcion in quedados %}
+                            <tr>
+                                <td>
+                                    {% if not inscripcion.ya_reintegrado and inscripcion.carrera_en_destino %}
+                                        <input type="checkbox" name="inscripciones" value="{{ inscripcion.id }}" class="chk-reintegrar" style="accent-color:var(--primario);">
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'panel:detalle_postulante' inscripcion.id %}" class="fila-link">
+                                        <div class="postulante-celda">
+                                            <div class="avatar-circulo">{{ inscripcion.postulante.iniciales }}</div>
+                                            <div>
+                                                <span class="postulante-nombre">{{ inscripcion.postulante.nombre_completo }}</span>
+                                                <span class="postulante-cedula">CI {{ inscripcion.postulante.usuario.cedula|default:"—" }}</span>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </td>
+                                <td>{{ inscripcion.carrera.nombre }}</td>
+                                <td>{% include 'panel/_avance_docs.html' %}</td>
+                                <td>
+                                    {% include 'panel/_avance_badge.html' %}
+                                    <a href="{% url 'panel:detalle_postulante' inscripcion.id %}" class="link-ver-doc" style="display:inline-block; margin-top:4px;">Revisar →</a>
+                                </td>
+                                <td>
+                                    {% if inscripcion.ya_reintegrado %}
+                                        <span class="badge badge-exito">Ya reintegrado</span>
+                                    {% elif not destino %}
+                                        <span class="badge badge-neutro">—</span>
+                                    {% elif not inscripcion.carrera_en_destino %}
+                                        <span class="badge badge-neutro" title="Agrega esta carrera al proceso destino para poder reintegrarlo">Carrera sin cupos</span>
+                                    {% else %}
+                                        <span class="badge badge-neutro">Pendiente</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div class="panel-paginacion">
+                    <span id="contador-seleccion">0 seleccionados</span>
+                    <label style="display:flex; align-items:center; gap:6px; margin:0 0 0 auto; font-size:12.5px; font-weight:600;">
+                        <input type="checkbox" name="avisar" value="1" style="accent-color:var(--primario);"> Avisar por correo a los estudiantes
+                    </label>
+                    <button type="submit" class="btn-sm btn" {% if not destino %}disabled{% endif %}>
+                        Reintegrar seleccionados{% if destino %} a "{{ destino.nombre }}"{% endif %}
+                    </button>
+                </div>
+            </form>
+        {% else %}
+            <div class="sin-resultados">Todos los estudiantes de este proceso lo completaron.</div>
+        {% endif %}
+    </div>
+
+    <script>
+        (function () {
+            const todos = document.getElementById('marcar-todos');
+            const checks = document.querySelectorAll('.chk-reintegrar');
+            const contador = document.getElementById('contador-seleccion');
+            function actualizar() {
+                const n = document.querySelectorAll('.chk-reintegrar:checked').length;
+                if (contador) contador.textContent = n + ' seleccionado' + (n === 1 ? '' : 's');
+            }
+            if (todos) {
+                todos.addEventListener('change', () => {
+                    checks.forEach(c => { c.checked = todos.checked; });
+                    actualizar();
+                });
+            }
+            checks.forEach(c => c.addEventListener('change', actualizar));
+        })();
+    </script>
+{% endblock %}

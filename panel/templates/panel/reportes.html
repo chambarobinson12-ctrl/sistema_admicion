@@ -1,0 +1,60 @@
+{% extends 'panel/base_panel.html' %}
+{% block title %}Reportes - Panel administrativo{% endblock %}
+
+{% block panel_content %}
+    <div class="panel-topbar">
+        <div>
+            <h1>Reportes</h1>
+            <span class="panel-topbar-subtitulo">
+                {% if convocatoria %}Proceso activo: {{ convocatoria.nombre }}{% else %}No hay ningún proceso de admisión activo.{% endif %}
+                · Total histórico: {{ total_inscripciones }} postulaciones
+            </span>
+        </div>
+    </div>
+
+    <div class="panel-dos-columnas" style="grid-template-columns: 1fr 1fr;">
+        <div class="tarjeta">
+            <span class="tarjeta-titulo">Postulaciones por estado</span>
+            <div class="datos-lista">
+                {% for fila in por_estado %}
+                    <div class="datos-item" style="justify-content:space-between; width:100%;">
+                        <span class="datos-item-valor">{{ fila.etiqueta }}</span>
+                        <span class="badge badge-primario">{{ fila.total }}</span>
+                    </div>
+                {% empty %}
+                    <span class="campo-ayuda">Todavía no hay postulaciones registradas.</span>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="tarjeta">
+            <span class="tarjeta-titulo">Postulaciones por carrera</span>
+            <div class="datos-lista">
+                {% for fila in por_carrera %}
+                    <div class="datos-item" style="justify-content:space-between; width:100%;">
+                        <span class="datos-item-valor">{{ fila.carrera__nombre|default:"Sin carrera" }}</span>
+                        <span class="badge badge-primario">{{ fila.total }}</span>
+                    </div>
+                {% empty %}
+                    <span class="campo-ayuda">Todavía no hay postulaciones registradas.</span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="tarjeta" style="margin-top:20px;">
+        <span class="tarjeta-titulo">Documentos por estado</span>
+        <div class="datos-lista">
+            {% for fila in documentos_por_estado %}
+                <div class="datos-item" style="justify-content:space-between; width:100%;">
+                    <span class="datos-item-valor">{{ fila.etiqueta }}</span>
+                    <span class="badge badge-primario">{{ fila.total }}</span>
+                </div>
+            {% empty %}
+                <span class="campo-ayuda">Todavía no se han subido documentos.</span>
+            {% endfor %}
+        </div>
+    </div>
+
+    <p class="campo-ayuda" style="margin-top:16px;">Para revisar a un postulante en particular, entra a "Postulantes" en el menú.</p>
+{% endblock %}

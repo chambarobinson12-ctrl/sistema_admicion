@@ -1,0 +1,39 @@
+QUE TRAE ESTE ZIP
+=================
+Agrega el botón "Descargar Excel de postulantes" en la pantalla de Postulantes
+del panel. El Excel generado tiene el mismo estilo del catálogo que enviaste
+(encabezado verde con el nombre del instituto, fila de columnas en verde
+claro), pero con la información de TU sistema (postulante, cédula, carrera,
+número de postulación, proceso, fecha, estado y documentos validados). Si
+tienes filtros activos (búsqueda, carrera o estado) en la pantalla de
+Postulantes, el Excel descargado respeta esos mismos filtros.
+
+ARCHIVOS Y DÓNDE VAN (reemplaza los que ya existen en tu proyecto)
+====================================================================
+1) panel/views.py
+   -> reemplaza: sistema_admision_istam\panel\views.py
+
+2) panel/urls.py
+   -> reemplaza: sistema_admision_istam\panel\urls.py
+
+3) panel/templates/panel/dashboard.html
+   -> reemplaza: sistema_admision_istam\panel\templates\panel\dashboard.html
+
+4) requirements.txt
+   -> reemplaza: sistema_admision_istam\requirements.txt
+   (solo se agregó la línea "openpyxl>=3.1", que es la librería que genera
+   el archivo Excel)
+
+PASOS EN TU COMPUTADORA (PowerShell, con el entorno virtual activado)
+========================================================================
+1. Copia los 4 archivos de arriba sobre los archivos reales de tu proyecto
+   (sobrescribiendo).
+2. Instala la nueva librería:
+       pip install openpyxl
+   (o simplemente: pip install -r requirements.txt)
+3. NO se necesita migrate, no se tocó ningún modelo.
+4. Reinicia el servidor (Ctrl+C y otra vez "python manage.py runserver").
+5. Entra al panel -> Postulantes -> vas a ver arriba a la derecha el botón
+   "⬇ Descargar Excel de postulantes". Al hacer click se descarga el .xlsx.
+
+Cualquier cosa rara, mándame captura y lo resolvemos.
