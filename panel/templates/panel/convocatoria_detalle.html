@@ -115,9 +115,13 @@ Se crea una inscripción nueva en el proceso elegido, con la misma carrera. El e
         </form>
 
         {% if quedados %}
-            <form method="post" action="{% url 'panel:reintegrar_postulantes' convocatoria.id %}">
+            <form method="post" action="{% url 'panel:eliminar_postulantes' convocatoria.id %}" data-confirmar-titulo="¿Eliminar postulantes?"
+                  data-confirmar-validar-grupo="inscripciones"
+                  data-confirmar-validar-mensaje="Marca al menos un postulante."
+                  data-confirmar-texto-plantilla="Vas a eliminar {n} postulante(s) de este proceso. Se borran su inscripción y sus documentos de aquí, pero su cuenta y sus datos personales se conservan."
+                  data-confirmar-boton="Sí, eliminar"
+                  data-confirmar-peligro="1">
                 {% csrf_token %}
-                <input type="hidden" name="destino" value="{{ destino.id|default:'' }}">
                 <table class="tabla-postulantes">
                     <thead>
                         <tr>
@@ -133,9 +137,7 @@ Se crea una inscripción nueva en el proceso elegido, con la misma carrera. El e
                         {% for inscripcion in quedados %}
                             <tr>
                                 <td>
-                                    {% if not inscripcion.ya_reintegrado and inscripcion.carrera_en_destino %}
-                                        <input type="checkbox" name="inscripciones" value="{{ inscripcion.id }}" class="chk-reintegrar" style="accent-color:var(--primario);">
-                                    {% endif %}
+                                    <input type="checkbox" name="inscripciones" value="{{ inscripcion.id }}" class="chk-reintegrar" style="accent-color:var(--primario);">
                                 </td>
                                 <td>
                                     <a href="{% url 'panel:detalle_postulante' inscripcion.id %}" class="fila-link">
@@ -171,12 +173,7 @@ Se crea una inscripción nueva en el proceso elegido, con la misma carrera. El e
                 </table>
                 <div class="panel-paginacion">
                     <span id="contador-seleccion">0 seleccionados</span>
-                    <label style="display:flex; align-items:center; gap:6px; margin:0 0 0 auto; font-size:12.5px; font-weight:600;">
-                        <input type="checkbox" name="avisar" value="1" style="accent-color:var(--primario);"> Avisar por correo a los estudiantes
-                    </label>
-                    <button type="submit" class="btn-sm btn" {% if not destino %}disabled{% endif %}>
-                        Reintegrar seleccionados{% if destino %} a "{{ destino.nombre }}"{% endif %}
-                    </button>
+                    <button type="submit" class="btn-sm btn-peligro-outline" style="margin-left:auto;">Eliminar postulante</button>
                 </div>
             </form>
         {% else %}

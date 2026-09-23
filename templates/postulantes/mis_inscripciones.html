@@ -63,7 +63,7 @@
                             {% endif %}
                         </div>
                         <p class="paso-panel-desc">{{ item.etiqueta }}</p>
-                        {% if item.ayuda %}<p class="campo-ayuda" style="font-size:13px; margin:0 0 12px;">{{ item.ayuda|linebreaksbr }}</p>{% endif %}
+                        {% if item.ayuda %}<p class="campo-ayuda campo-ayuda-enlace" style="font-size:13px; margin:0 0 12px;">{{ item.ayuda|urlize|linebreaksbr }}</p>{% endif %}
 
                         {% if forloop.first %}
 
@@ -112,7 +112,11 @@
                             <p class="doc-meta">Cargado el {{ item.documento.fecha_subida|date:"d/m/Y" }} · <a href="{{ item.documento.archivo.url }}" target="_blank">Ver archivo</a></p>
 
                             {% if inscripcion.estado != 'aprobada' and item.documento.estado != 'validado' %}
-                                <form method="post" action="{% url 'eliminar_documento' inscripcion.id item.tipo %}" class="proc-eliminar" onsubmit="return confirm('¿Eliminar este documento? Podrás subir otro después.');">
+                                <form method="post" action="{% url 'eliminar_documento' inscripcion.id item.tipo %}" class="proc-eliminar"
+                                      data-confirmar-titulo="¿Eliminar este documento?"
+                                      data-confirmar-texto="Podrás subir otro después."
+                                      data-confirmar-boton="Sí, eliminar"
+                                      data-confirmar-peligro="1">
                                     {% csrf_token %}
                                     <button type="submit" class="btn-sm btn-peligro-outline">Eliminar documento</button>
                                 </form>

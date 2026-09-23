@@ -1,6 +1,6 @@
 from datetime import date
 from django.shortcuts import render
-from .models import Convocatoria
+from .models import Convocatoria, Carrera
 
 
 CARRERAS_INFO = {
@@ -86,6 +86,7 @@ def lista_carreras(request):
                 'clave': clave,
                 'info': CARRERAS_INFO.get(clave),
                 'pausada': not cupo.carrera.activa,
+                'malla_url': cupo.carrera.malla_curricular.url if cupo.carrera.malla_curricular else '',
             })
 
         if conv.fecha_fin < hoy:
@@ -106,7 +107,17 @@ def lista_carreras(request):
             if clave:
                 ids_carrera[clave] = cupo.carrera_id
 
-    modales = {clave: dict(info, carrera_id=ids_carrera.get(clave)) for clave, info in CARRERAS_INFO.items()}
+    # Malla curricular de cada carrera (la que el administrador subió en Carreras)
+    mallas = {}
+    for carrera in Carrera.objects.exclude(malla_curricular='').exclude(malla_curricular__isnull=True):
+        clave = clave_carrera(carrera.nombre)
+        if clave and clave not in mallas:
+            mallas[clave] = carrera.malla_curricular.url
+
+    modales = {
+        clave: dict(info, carrera_id=ids_carrera.get(clave), malla_url=mallas.get(clave, ''))
+        for clave, info in CARRERAS_INFO.items()
+    }
 
     return render(request, 'convocatorias/lista_carreras.html', {
         'convocatorias': convocatorias,

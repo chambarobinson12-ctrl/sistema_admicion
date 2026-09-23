@@ -137,19 +137,6 @@ def configuracion(request):
     if request.method == 'POST':
         accion = request.POST.get('accion')
 
-        if accion == 'proceso_actual':
-            # Deja un solo proceso activo: el que el ingeniero elige como actual.
-            elegido = Convocatoria.objects.filter(id=request.POST.get('convocatoria') or 0).first()
-            if elegido:
-                Convocatoria.objects.exclude(id=elegido.id).update(activa=False)
-                if not elegido.activa:
-                    elegido.activa = True
-                    elegido.save(update_fields=['activa'])
-                messages.success(request, f'"{elegido.nombre}" es ahora el proceso actual. Los demás procesos quedaron cerrados.')
-            else:
-                messages.error(request, 'Elige un proceso.')
-            return redirect('panel:configuracion')
-
         if accion == 'estado_postulante':
             inscripcion = Inscripcion.objects.filter(id=request.POST.get('inscripcion') or 0).first()
             nuevo_estado = request.POST.get('estado')
@@ -198,6 +185,10 @@ def configuracion(request):
         inscripciones = [i for i in consulta if not filtro_avance or i.avance == filtro_avance]
     pagina = Paginator(inscripciones, 15).get_page(request.GET.get('pagina'))
 
+    destinos_abiertos = convocatorias.filter(activa=True)
+    if proceso:
+        destinos_abiertos = destinos_abiertos.exclude(id=proceso.id)
+
     return render(request, 'panel/configuracion.html', {
         'convocatoria_activa': convocatoria_activa,
         'convocatorias': convocatorias,
@@ -208,6 +199,7 @@ def configuracion(request):
         'proceso': proceso,
         'pagina': pagina,
         'resumen_avance': resumen_avance,
+        'destinos_abiertos': destinos_abiertos,
         'filtro_q': q,
         'filtro_avance': filtro_avance,
     })

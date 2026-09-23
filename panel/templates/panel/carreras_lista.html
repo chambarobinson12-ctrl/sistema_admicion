@@ -10,7 +10,12 @@
     </div>
 
     <form id="form-eliminar" method="post" action="{% url 'panel:carreras_eliminar' %}"
-          onsubmit="var n = document.querySelectorAll('input[name=carreras]:checked').length; if (!n) { alert('Marca al menos una carrera.'); return false; } return confirm('¿Eliminar ' + n + ' carrera(s)? Esta acción no se puede deshacer.');">
+          data-confirmar-titulo="¿Eliminar carreras?"
+          data-confirmar-validar-grupo="carreras"
+          data-confirmar-validar-mensaje="Marca al menos una carrera para eliminar."
+          data-confirmar-texto-plantilla="Vas a eliminar {n} carrera(s). Esta acción no se puede deshacer."
+          data-confirmar-boton="Sí, eliminar"
+          data-confirmar-peligro="1">
         {% csrf_token %}
     </form>
 
@@ -23,6 +28,7 @@
                         <th>Nombre</th>
                         <th>Código</th>
                         <th>Estado</th>
+                        <th>Malla curricular</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -37,7 +43,10 @@
                                     <span class="badge {% if carrera.activa %}badge-exito{% else %}badge-alerta{% endif %}">
                                         {% if carrera.activa %}Activa{% else %}Pausada{% endif %}
                                     </span>
-                                    <form method="post" action="{% url 'panel:carrera_cambiar_estado' carrera.id %}">
+                                    <form method="post" action="{% url 'panel:carrera_cambiar_estado' carrera.id %}"
+                                          data-confirmar-titulo="{% if carrera.activa %}¿Pausar esta carrera?{% else %}¿Activar esta carrera?{% endif %}"
+                                          data-confirmar-texto="{% if carrera.activa %}«{{ carrera.nombre }}» ya no se ofrecerá a los postulantes.{% else %}«{{ carrera.nombre }}» volverá a ofrecerse a los postulantes.{% endif %}"
+                                          data-confirmar-boton="{% if carrera.activa %}Sí, pausar{% else %}Sí, activar{% endif %}">
                                         {% csrf_token %}
                                         {% if carrera.activa %}
                                             <button type="submit" class="btn-sm btn-pausar">Pausar carrera</button>
@@ -46,6 +55,13 @@
                                         {% endif %}
                                     </form>
                                 </div>
+                            </td>
+                            <td>
+                                {% if carrera.malla_curricular %}
+                                    <a href="{{ carrera.malla_curricular.url }}" target="_blank" class="btn btn-sm btn-secundario">📄 Ver malla</a>
+                                {% else %}
+                                    <a href="{% url 'panel:carrera_editar' carrera.id %}#malla" class="btn btn-sm">+ Agregar malla curricular</a>
+                                {% endif %}
                             </td>
                             <td><a href="{% url 'panel:carrera_editar' carrera.id %}" class="btn btn-sm btn-secundario">Editar</a></td>
                         </tr>

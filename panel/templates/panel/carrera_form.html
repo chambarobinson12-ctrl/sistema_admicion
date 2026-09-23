@@ -11,7 +11,7 @@
         <div class="form-seccion-titulo">
             <span>{% if es_nueva %}Nueva carrera{% else %}Editar carrera{% endif %}</span>
         </div>
-        <form method="post">
+        <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
             <label for="{{ form.nombre.id_for_label }}">Nombre de la carrera</label>
             {{ form.nombre }}
@@ -26,10 +26,29 @@
                 <label for="{{ form.activa.id_for_label }}">Carrera activa (visible para postulantes)</label>
             </div>
 
+            <div id="malla" class="malla-caja">
+                <label for="{{ form.malla_curricular.id_for_label }}">📄 Malla curricular (PDF o imagen, máx. 10 MB)</label>
+                {% if carrera and carrera.malla_curricular %}
+                    <p class="campo-ayuda" style="margin:4px 0 8px;">
+                        Archivo actual: <a href="{{ carrera.malla_curricular.url }}" target="_blank">Ver malla curricular</a>.
+                        Sube otro archivo para reemplazarlo o marca "Limpiar" para quitarlo.
+                    </p>
+                {% else %}
+                    <p class="campo-ayuda" style="margin:4px 0 8px;">Cuando la subas, los estudiantes podrán descargarla desde la página de Carreras.</p>
+                {% endif %}
+                {{ form.malla_curricular }}
+                {{ form.malla_curricular.errors }}
+            </div>
+
             <div class="form-pie" style="margin-top:20px;">
                 <a href="{% url 'panel:carreras_lista' %}" class="btn btn-secundario">Cancelar</a>
                 <button type="submit" class="btn">Guardar</button>
             </div>
         </form>
     </div>
+
+    <style>
+        .malla-caja { margin-top: 18px; padding: 14px 16px; border: 1px dashed #b9cfa3; border-radius: 12px; background: #f6faf1; }
+        .malla-caja input[type="file"] { display: block; margin-top: 6px; }
+    </style>
 {% endblock %}

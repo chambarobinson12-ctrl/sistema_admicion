@@ -7,7 +7,27 @@
         <span class="actual">{% if es_nueva %}Nuevo{% else %}Editar{% endif %}</span>
     </div>
 
-    <form method="post">
+    {# ===== Resumen de errores: si algo falla al guardar, se ve aquí arriba ===== #}
+    {% if form.errors or formset.total_error_count %}
+        <div class="caja-errores" id="caja-errores">
+            <strong>No se pudo guardar el proceso. Revisa lo siguiente:</strong>
+            <ul>
+                {% for campo in form %}
+                    {% for error in campo.errors %}<li><b>{{ campo.label }}:</b> {{ error }}</li>{% endfor %}
+                {% endfor %}
+                {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+                {% for error in formset.non_form_errors %}<li>{{ error }}</li>{% endfor %}
+                {% for f in formset %}
+                    {% for campo in f %}
+                        {% for error in campo.errors %}<li><b>Fila {{ forloop.parentloop.parentloop.counter }} – {{ campo.label }}:</b> {{ error }}</li>{% endfor %}
+                    {% endfor %}
+                    {% for error in f.non_field_errors %}<li><b>Fila {{ forloop.parentloop.counter }}:</b> {{ error }}</li>{% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <form method="post" id="form-proceso" novalidate>
         {% csrf_token %}
         {% if origen %}<input type="hidden" name="origen" value="{{ origen.id }}">{% endif %}
 
@@ -45,48 +65,128 @@
                 <span class="form-seccion-numero">2</span>
                 <span>Cupos por carrera</span>
             </div>
-            <p class="campo-ayuda" style="margin-bottom:14px;">Elige una carrera y cuántos cupos tendrá dentro de este proceso. Estos cupos son los que ven los postulantes en "Postularme".</p>
+            <p class="campo-ayuda" style="margin-bottom:14px;">Elige una carrera y cuántos cupos tendrá dentro de este proceso. Cada carrera solo puede aparecer una vez. Usa "Quitar" para sacar una fila.</p>
 
             {{ formset.management_form }}
             <div id="cupos-filas">
                 {% for cupo_form in formset %}
-                    <div class="form-grid-2 cupo-fila" style="align-items:center; margin-bottom:8px;">
-                        <div>{{ cupo_form.id }}{{ cupo_form.carrera }}{{ cupo_form.carrera.errors }}</div>
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            {{ cupo_form.cupos }}
-                            {% if cupo_form.instance.pk %}
-                                <span class="campo-ayuda">{{ cupo_form.DELETE }} Eliminar</span>
-                            {% endif %}
-                        </div>
-                        {{ cupo_form.cupos.errors }}
+                    <div class="cupo-fila{% if cupo_form.DELETE.value %} fila-quitada{% endif %}">
+                        {{ cupo_form.id }}
+                        <span class="casilla-delete">{{ cupo_form.DELETE }}</span>
+                        <div class="cupo-carrera">{{ cupo_form.carrera }}</div>
+                        <div class="cupo-numero">{{ cupo_form.cupos }}</div>
+                        <button type="button" class="btn-quitar-fila">Quitar</button>
+                        {% if cupo_form.carrera.errors or cupo_form.cupos.errors %}
+                            <div class="cupo-error">{{ cupo_form.carrera.errors|striptags }} {{ cupo_form.cupos.errors|striptags }}</div>
+                        {% endif %}
                     </div>
                 {% endfor %}
             </div>
             <button type="button" id="btn-agregar-cupo" class="btn-sm btn-secundario" style="margin-top:10px;">+ Agregar otra carrera</button>
         </div>
 
-        <div class="form-pie" style="margin-bottom:40px;">
-            <a href="{% if origen %}{% url 'panel:convocatoria_detalle' origen.id %}{% else %}{% url 'panel:convocatorias_lista' %}{% endif %}" class="btn btn-secundario">Cancelar</a>
-            <button type="submit" class="btn">Guardar proceso</button>
+        <div class="barra-guardar">
+            <a href="{% if origen %}{% url 'panel:convocatoria_detalle' origen.id %}{% else %}{% url 'panel:convocatorias_lista' %}{% endif %}" class="btn-cancelar-proceso">Cancelar</a>
+            <button type="submit" class="btn-guardar-proceso">💾 Guardar proceso</button>
         </div>
     </form>
 
     <template id="plantilla-cupo-fila">
-        <div class="form-grid-2 cupo-fila" style="align-items:center; margin-bottom:8px;">
-            {{ formset.empty_form.carrera }}
-            <div style="display:flex; align-items:center; gap:10px;">
-                {{ formset.empty_form.cupos }}
-            </div>
+        <div class="cupo-fila">
+            <span class="casilla-delete">{{ formset.empty_form.DELETE }}</span>
+            <div class="cupo-carrera">{{ formset.empty_form.carrera }}</div>
+            <div class="cupo-numero">{{ formset.empty_form.cupos }}</div>
+            <button type="button" class="btn-quitar-fila">Quitar</button>
         </div>
     </template>
 
+    <style>
+        .caja-errores {
+            background: #fdecea;
+            border: 1px solid #f5c2bd;
+            color: #8a1c12;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+        }
+        .caja-errores ul { margin: 8px 0 0 18px; padding: 0; }
+        .cupo-fila {
+            display: grid;
+            grid-template-columns: 1fr 160px auto;
+            gap: 14px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .cupo-fila.fila-quitada { display: none; }
+        .cupo-fila.fila-repetida .cupo-carrera select { border-color: #d93636; background: #fff5f5; }
+        .casilla-delete { display: none; }
+        .cupo-error { grid-column: 1 / -1; color: #b82d2d; font-size: 13px; margin-top: -4px; }
+        #cupos-filas select { width: 100%; }
+        #cupos-filas input[type="number"] {
+            width: 160px;
+            padding: 12px 14px;
+            border: 1px solid #d6dccf;
+            border-radius: 10px;
+            font-size: 15px;
+            background: #fff;
+            box-sizing: border-box;
+        }
+        .btn-quitar-fila {
+            background: #fff;
+            color: #b82d2d;
+            border: 1px solid #f0c4c4;
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .btn-quitar-fila:hover { background: #fdecea; }
+        .barra-guardar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 12px;
+            margin: 24px 0 40px;
+        }
+        .barra-guardar .btn-guardar-proceso,
+        .barra-guardar .btn-cancelar-proceso {
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            height: 48px;
+            margin: 0 !important;
+            padding: 0 24px !important;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 15px;
+            line-height: 1;
+            box-sizing: border-box;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .barra-guardar .btn-guardar-proceso { background: #174d08; color: #fff; border: none; box-shadow: 0 4px 10px rgba(0,0,0,.15); }
+        .barra-guardar .btn-guardar-proceso:hover { background: #0f3905; }
+        .barra-guardar .btn-cancelar-proceso { background: #fff; color: #174d08; border: 1px solid #d6dccf; }
+        .barra-guardar .btn-cancelar-proceso:hover { background: #f1f5ec; }
+    </style>
+
     <script>
         (function () {
+            const form = document.getElementById('form-proceso');
             const totalFormsInput = document.querySelector('#id_cupocarrera_set-TOTAL_FORMS');
             const contenedor = document.getElementById('cupos-filas');
             const plantilla = document.getElementById('plantilla-cupo-fila');
             const btnAgregar = document.getElementById('btn-agregar-cupo');
 
+            function aviso(texto) {
+                if (window.avisar) { window.avisar(texto, 'warning'); } else { alert(texto); }
+            }
+
+            // Si hubo errores al guardar, llevar la vista al resumen
+            const cajaErrores = document.getElementById('caja-errores');
+            if (cajaErrores) cajaErrores.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // + Agregar otra carrera
             btnAgregar.addEventListener('click', () => {
                 const indice = parseInt(totalFormsInput.value, 10);
                 const html = plantilla.innerHTML.replace(/__prefix__/g, indice);
@@ -95,6 +195,95 @@
                 contenedor.appendChild(envoltorio.firstElementChild);
                 totalFormsInput.value = indice + 1;
             });
+
+            // Quitar fila: se marca como eliminada (Django la ignora) y se oculta
+            contenedor.addEventListener('click', (e) => {
+                const boton = e.target.closest('.btn-quitar-fila');
+                if (!boton) return;
+                const fila = boton.closest('.cupo-fila');
+                const casilla = fila.querySelector('.casilla-delete input[type="checkbox"]');
+                if (casilla) casilla.checked = true;
+                fila.classList.add('fila-quitada');
+                marcarRepetidas();
+            });
+
+            function filasVisibles() {
+                return Array.from(contenedor.querySelectorAll('.cupo-fila:not(.fila-quitada)'));
+            }
+
+            function marcarRepetidas() {
+                const vistos = {};
+                let hayRepetidas = false;
+                filasVisibles().forEach(f => f.classList.remove('fila-repetida'));
+                filasVisibles().forEach(f => {
+                    const sel = f.querySelector('select');
+                    if (!sel || !sel.value) return;
+                    if (vistos[sel.value]) {
+                        f.classList.add('fila-repetida');
+                        vistos[sel.value].classList.add('fila-repetida');
+                        hayRepetidas = true;
+                    } else {
+                        vistos[sel.value] = f;
+                    }
+                });
+                return hayRepetidas;
+            }
+            contenedor.addEventListener('change', marcarRepetidas);
+
+            // Revisión antes de enviar: avisa en vez de "no hacer nada"
+            form.addEventListener('submit', (e) => {
+                const nombre = document.getElementById('{{ form.nombre.id_for_label }}');
+                const inicio = document.getElementById('{{ form.fecha_inicio.id_for_label }}');
+                const fin = document.getElementById('{{ form.fecha_fin.id_for_label }}');
+
+                if (!nombre.value.trim()) { e.preventDefault(); aviso('Escribe el nombre del proceso.'); return; }
+                if (!inicio.value || !fin.value) { e.preventDefault(); aviso('Elige la fecha de inicio y la fecha de cierre.'); return; }
+                if (fin.value < inicio.value) { e.preventDefault(); aviso('La fecha de cierre no puede ser antes de la fecha de inicio.'); return; }
+
+                if (marcarRepetidas()) {
+                    e.preventDefault();
+                    aviso('Hay una carrera repetida (marcada en rojo). Cámbiala o pulsa "Quitar" en esa fila.');
+                    return;
+                }
+
+                const sinCupos = filasVisibles().some(f => {
+                    const sel = f.querySelector('select');
+                    const num = f.querySelector('input[type="number"]');
+                    return sel && sel.value && (!num.value || parseInt(num.value, 10) < 1);
+                });
+                if (sinCupos) { e.preventDefault(); aviso('Escribe cuántos cupos tiene cada carrera (mínimo 1), o quita la fila.'); return; }
+
+                // Todo bien: confirmar con SweetAlert antes de guardar
+                if (window.confirmarAviso) {
+                    e.preventDefault();
+                    window.confirmarAviso({
+                        titulo: '{% if es_nueva %}¿Crear este proceso?{% else %}¿Guardar los cambios?{% endif %}',
+                        texto: 'Proceso: <b>' + nombre.value.trim().replace(/</g, '&lt;') + '</b>',
+                        icono: 'question',
+                        textoConfirmar: '{% if es_nueva %}Sí, crear proceso{% else %}Sí, guardar{% endif %}',
+                    }).then(ok => { if (ok) { hayCambios = false; form.submit(); } });
+                }
+            });
+
+            // Cancelar: si hay cambios sin guardar, preguntar antes de salir
+            let hayCambios = false;
+            form.addEventListener('input', () => { hayCambios = true; });
+            form.addEventListener('change', () => { hayCambios = true; });
+            document.querySelector('.btn-cancelar-proceso').addEventListener('click', (e) => {
+                if (!hayCambios || !window.confirmarAviso) return;
+                e.preventDefault();
+                const destino = e.currentTarget.href;
+                window.confirmarAviso({
+                    titulo: '¿Salir sin guardar?',
+                    texto: 'Los datos que escribiste en este formulario se perderán.',
+                    icono: 'warning',
+                    textoConfirmar: 'Sí, salir',
+                    textoCancelar: 'Seguir editando',
+                    peligro: true,
+                }).then(ok => { if (ok) window.location.href = destino; });
+            });
+
+            marcarRepetidas();
         })();
     </script>
 {% endblock %}

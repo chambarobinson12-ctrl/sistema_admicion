@@ -24,6 +24,7 @@ urlpatterns = [
     path('procesos/<int:convocatoria_id>/', views.convocatoria_detalle, name='convocatoria_detalle'),
     path('procesos/<int:convocatoria_id>/editar/', views.convocatoria_editar, name='convocatoria_editar'),
     path('procesos/<int:convocatoria_id>/estado/', views.convocatoria_cambiar_estado, name='convocatoria_cambiar_estado'),
+    path('procesos/eliminar/', views.convocatorias_eliminar, name='convocatorias_eliminar'),
 
     path('examenes/', views.examenes_lista, name='examenes_lista'),
     path('examenes/nuevo/', views.examen_crear, name='examen_crear'),
@@ -35,6 +36,7 @@ urlpatterns = [
     path('configuracion/', views_config.configuracion, name='configuracion'),
     path('configuracion/proceso/<int:convocatoria_id>/', views.convocatoria_detalle, name='proceso_historial'),
     path('configuracion/proceso/<int:convocatoria_id>/reintegrar/', views.reintegrar_postulantes, name='reintegrar_postulantes'),
+    path('configuracion/proceso/<int:convocatoria_id>/eliminar-postulantes/', views.eliminar_postulantes, name='eliminar_postulantes'),
     path('configuracion/estados/', views_config.estados_postulantes, name='estados_postulantes'),
     path('configuracion/estados/<int:inscripcion_id>/comentario/', views_config.enviar_comentario, name='enviar_comentario'),
     path('configuracion/estados/<int:inscripcion_id>/cambiar/', views_config.cambiar_estado, name='cambiar_estado'),

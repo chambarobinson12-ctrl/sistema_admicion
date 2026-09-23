@@ -13,7 +13,7 @@
         </div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
         <a href="{% url 'panel:revisar_documentos' %}" class="btn-sm btn">👁 Revisar documentos</a>
-        <a href="{% url 'panel:exportar_postulantes_excel' %}?q={{ filtro_q }}&carrera={{ filtro_carrera }}&avance={{ filtro_avance }}" class="btn-sm btn-secundario" style="white-space:nowrap;">⬇ Descargar Excel de postulantes</a>
+        <a href="{% url 'panel:exportar_postulantes_excel' %}?q={{ filtro_q }}&carrera={{ filtro_carrera }}&avance={{ filtro_avance }}&proceso={{ filtro_proceso }}" class="btn-sm btn-secundario" style="white-space:nowrap;">⬇ Descargar Excel de postulantes</a>
         </div>
     </div>
 
@@ -42,6 +42,11 @@
     <div class="panel-tabla-card">
         <form method="get" class="panel-filtros">
             <input type="text" name="q" value="{{ filtro_q }}" placeholder="Buscar por nombre, cédula o N.° de postulación">
+            <select name="proceso" style="width:auto;">
+                {% for conv in convocatorias %}
+                    <option value="{{ conv.id }}" {% if filtro_proceso == conv.id|stringformat:"s" %}selected{% endif %}>{{ conv.nombre }}{% if conv.activa %} (activo){% endif %}</option>
+                {% endfor %}
+            </select>
             <select name="carrera">
                 <option value="">Carrera: Todas</option>
                 {% for carrera in carreras %}
@@ -98,21 +103,21 @@
                 </tbody>
             </table>
 
-            <div class="panel-paginacion">
+              <div class="panel-paginacion">
                 <span>Mostrando {{ pagina.start_index }}–{{ pagina.end_index }} de {{ pagina.paginator.count }} postulantes</span>
                 <div class="paginas">
                     {% if pagina.has_previous %}
-                        <a href="?pagina={{ pagina.previous_page_number }}&q={{ filtro_q }}&carrera={{ filtro_carrera }}&avance={{ filtro_avance }}">‹</a>
+                        <a href="?pagina={{ pagina.previous_page_number }}&q={{ filtro_q }}&carrera={{ filtro_carrera }}&avance={{ filtro_avance }}&proceso={{ filtro_proceso }}">‹</a>
                     {% endif %}
                     {% for numero in pagina.paginator.page_range %}
                         {% if numero == pagina.number %}
                             <span class="pagina-actual">{{ numero }}</span>
                         {% elif numero > pagina.number|add:"-3" and numero < pagina.number|add:"3" %}
-                            <a href="?pagina={{ numero }}&q={{ filtro_q }}&carrera={{ filtro_carrera }}&avance={{ filtro_avance }}">{{ numero }}</a>
+                            <a href="?pagina={{ numero }}&q={{ filtro_q }}&carrera={{ filtro_carrera }}&avance={{ filtro_avance }}&proceso={{ filtro_proceso }}">{{ numero }}</a>
                         {% endif %}
                     {% endfor %}
                     {% if pagina.has_next %}
-                        <a href="?pagina={{ pagina.next_page_number }}&q={{ filtro_q }}&carrera={{ filtro_carrera }}&avance={{ filtro_avance }}">›</a>
+                        <a href="?pagina={{ pagina.next_page_number }}&q={{ filtro_q }}&carrera={{ filtro_carrera }}&avance={{ filtro_avance }}&proceso={{ filtro_proceso }}">›</a>
                     {% endif %}
                 </div>
             </div>

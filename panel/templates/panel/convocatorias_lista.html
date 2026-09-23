@@ -7,14 +7,24 @@
             <h1>Procesos de admisión</h1>
             <span class="panel-topbar-subtitulo">Convocatorias, fechas y cupos por carrera.</span>
         </div>
-        <a href="{% url 'panel:convocatoria_crear' %}" class="btn">+ Nuevo proceso</a>
     </div>
+
+    <form id="form-eliminar" method="post" action="{% url 'panel:convocatorias_eliminar' %}"
+          data-confirmar-titulo="¿Eliminar procesos?"
+          data-confirmar-validar-grupo="convocatorias"
+          data-confirmar-validar-mensaje="Marca al menos un proceso para eliminar."
+          data-confirmar-texto-plantilla="Vas a eliminar {n} proceso(s). Esta acción no se puede deshacer."
+          data-confirmar-boton="Sí, eliminar"
+          data-confirmar-peligro="1">
+        {% csrf_token %}
+    </form>
 
     <div class="panel-tabla-card">
         {% if convocatorias %}
             <table class="tabla-postulantes">
                 <thead>
                     <tr>
+                        <th style="width:40px;"></th>
                         <th>Proceso</th>
                         <th>Fechas</th>
                         <th>Cupos</th>
@@ -25,36 +35,68 @@
                 <tbody>
                     {% for convocatoria in convocatorias %}
                         <tr>
+                            <td><input type="checkbox" name="convocatorias" value="{{ convocatoria.id }}" form="form-eliminar" style="width:16px; height:16px;"></td>
                             <td>
-                                <a href="{% url 'panel:convocatoria_detalle' convocatoria.id %}" class="fila-link">
+                                <a href="{% url 'panel:convocatoria_editar' convocatoria.id %}" class="fila-link">
                                     {{ convocatoria.nombre }}
-                                    <span class="etiqueta-proceso {{ convocatoria.etiqueta_clase }}">{{ convocatoria.etiqueta }}</span>
+                                    {% if convocatoria.etiqueta_clase == 'etiqueta-nuevo' %}
+                                        <span class="badge badge-primario">Nuevo proceso</span>
+                                    {% elif convocatoria.etiqueta_clase == 'etiqueta-cerrado' %}
+                                        <span class="badge badge-neutro">Proceso finalizado</span>
+                                    {% else %}
+                                        <span class="badge badge-exito">Proceso actual</span>
+                                    {% endif %}
                                 </a>
                             </td>
-                            <td><a href="{% url 'panel:convocatoria_detalle' convocatoria.id %}" class="fila-link">{{ convocatoria.fecha_inicio|date:"d M Y" }} — {{ convocatoria.fecha_fin|date:"d M Y" }}</a></td>
-                            <td><a href="{% url 'panel:convocatoria_detalle' convocatoria.id %}" class="fila-link">{{ convocatoria.cupocarrera_set.count }} carrera(s)</a></td>
                             <td>
-                                <div class="proceso-estado-celda">
-                                    <span class="badge {% if convocatoria.activa %}badge-exito{% else %}badge-alerta{% endif %}">
-                                        {% if convocatoria.activa %}Activa{% else %}Pausada{% endif %}
-                                    </span>
-                                    <form method="post" action="{% url 'panel:convocatoria_cambiar_estado' convocatoria.id %}" onsubmit="return confirm('{% if convocatoria.activa %}¿Pausar este proceso? Dejará de aparecer en Carreras.{% else %}¿Activar este proceso? Volverá a aparecer en Carreras.{% endif %}');">
-                                        {% csrf_token %}
-                                        {% if convocatoria.activa %}
-                                            <button type="submit" class="btn-sm btn-pausar">Pausar proceso</button>
-                                        {% else %}
-                                            <button type="submit" class="btn-sm">Activar proceso</button>
-                                        {% endif %}
-                                    </form>
+                                <a href="{% url 'panel:convocatoria_editar' convocatoria.id %}" class="fila-link">
+                                    {{ convocatoria.fecha_inicio|date:"d M Y" }} — {{ convocatoria.fecha_fin|date:"d M Y" }}
+                                </a>
+                            </td>
+                            <td>
+                                <a href="{% url 'panel:convocatoria_editar' convocatoria.id %}" class="fila-link">
+                                    {{ convocatoria.cupocarrera_set.count }} carrera(s)
+                                </a>
+                            </td>
+                            <td>
+                                <div class="proceso-estado-celda" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                    {% if convocatoria.activa %}
+                                        <span class="badge badge-exito">Activa</span>
+                                        <form method="post" action="{% url 'panel:convocatoria_cambiar_estado' convocatoria.id %}" style="margin:0;"
+                                              data-confirmar-titulo="¿Pausar este proceso?"
+                                              data-confirmar-texto="«{{ convocatoria.nombre }}» dejará de aparecer para los postulantes."
+                                              data-confirmar-boton="Sí, pausar">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-secundario btn-sm">Pausar proceso</button>
+                                        </form>
+                                    {% else %}
+                                        <span class="badge badge-alerta">Pausada</span>
+                                        <form method="post" action="{% url 'panel:convocatoria_cambiar_estado' convocatoria.id %}" style="margin:0;"
+                                              data-confirmar-titulo="¿Activar este proceso?"
+                                              data-confirmar-texto="«{{ convocatoria.nombre }}» volverá a aparecer para los postulantes."
+                                              data-confirmar-boton="Sí, activar">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-exito btn-sm">Activar proceso</button>
+                                        </form>
+                                    {% endif %}
                                 </div>
                             </td>
-                            <td><a href="{% url 'panel:convocatoria_detalle' convocatoria.id %}" class="btn btn-sm btn-secundario">Ver</a></td>
+                            <td><a href="{% url 'panel:convocatoria_detalle' convocatoria.id %}" class="btn btn-secundario btn-sm">Ver</a></td>
                         </tr>
                     {% endfor %}
                 </tbody>
             </table>
         {% else %}
             <div class="sin-resultados">Todavía no hay procesos de admisión registrados.</div>
+        {% endif %}
+
+    </div>
+
+    <!-- Botones fuera del cuadro: Nuevo proceso a la izquierda, Eliminar a la derecha -->
+    <div class="procesos-acciones">
+        <a href="{% url 'panel:convocatoria_crear' %}" class="btn-nuevo-proceso">+ Nuevo proceso</a>
+        {% if convocatorias %}
+            <button type="submit" form="form-eliminar" class="btn-danger">🗑 Eliminar</button>
         {% endif %}
     </div>
 {% endblock %}

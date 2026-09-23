@@ -89,7 +89,14 @@
                 <a href="{% url 'panel:convocatoria_crear' %}">Crear proceso →</a>
             </div>
         {% elif candidatos %}
-            <form method="post" action="{% url 'panel:reintegrar_postulantes' convocatoria.id %}" id="form-reintegro">
+            <form method="post" action="{% url 'panel:reintegrar_postulantes' convocatoria.id %}" id="form-reintegro"
+                  data-confirmar-titulo="¿Reintegrar postulantes?"
+                  data-confirmar-validar-grupo="inscripciones"
+                  data-confirmar-validar-mensaje="Marca al menos un postulante."
+                  data-confirmar-requerido="destino"
+                  data-confirmar-requerido-mensaje="Elige a qué proceso reintegrarlos."
+                  data-confirmar-texto-plantilla="Se pasarán {n} postulante(s) al proceso {destino}."
+                  data-confirmar-boton="Sí, reintegrar">
                 {% csrf_token %}
                 <div class="tabla-scroll">
                     <table class="tabla-postulantes tabla-config">
@@ -170,12 +177,6 @@
         }
         checks.forEach(c => c.addEventListener('change', actualizar));
         if (todos) todos.addEventListener('change', () => { checks.forEach(c => c.checked = todos.checked); actualizar(); });
-        document.getElementById('form-reintegro').addEventListener('submit', (e) => {
-            const destino = e.target.querySelector('select[name="destino"]');
-            const nombre = destino.options[destino.selectedIndex].text;
-            const n = checks.filter(c => c.checked).length;
-            if (!confirm('¿Reintegrar ' + n + ' postulante(s) al proceso "' + nombre + '"?')) e.preventDefault();
-        });
     })();
     </script>
 {% endblock %}

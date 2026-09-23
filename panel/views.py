@@ -17,6 +17,7 @@ from .decorators import panel_required
 from .notificaciones import notificar_documento, notificar_decision_inscripcion, notificar_reintegro
 from .forms import CarreraForm, ConvocatoriaForm, CupoCarreraFormSet, ExamenForm, ConfiguracionProcesoForm
 
+
 def _convocatoria_activa():
     return Convocatoria.objects.filter(activa=True).order_by('fecha_fin').first()
 
@@ -277,7 +278,6 @@ def validar_documento(request, documento_id):
     documento.revisado_por = request.user
     documento.save()
 
-
     if accion == 'rechazar' and documento.inscripcion.estado == 'aprobada':
         documento.inscripcion.estado = 'docs_pendientes'
         documento.inscripcion.save(update_fields=['estado'])
@@ -339,7 +339,7 @@ def carreras_lista(request):
 @panel_required
 def carrera_crear(request):
     if request.method == 'POST':
-        form = CarreraForm(request.POST)
+        form = CarreraForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
             messages.success(request, 'Carrera creada correctamente.')
@@ -353,7 +353,7 @@ def carrera_crear(request):
 def carrera_editar(request, carrera_id):
     carrera = get_object_or_404(Carrera, id=carrera_id)
     if request.method == 'POST':
-        form = CarreraForm(request.POST, instance=carrera)
+        form = CarreraForm(request.POST, request.FILES, instance=carrera)
         if form.is_valid():
             form.save()
             messages.success(request, 'Carrera actualizada correctamente.')
@@ -361,6 +361,7 @@ def carrera_editar(request, carrera_id):
     else:
         form = CarreraForm(instance=carrera)
     return render(request, 'panel/carrera_form.html', {'form': form, 'carrera': carrera, 'es_nueva': False})
+
 
 @panel_required
 def carrera_cambiar_estado(request, carrera_id):
@@ -403,13 +404,17 @@ def carreras_eliminar(request):
         )
     return redirect('panel:carreras_lista')
 
+
 # ============================================================
 # Procesos de admisión (Convocatorias) — con cupos por carrera
 # ============================================================
 
 @panel_required
 def convocatorias_lista(request):
-    convocatorias = list(Convocatoria.objects.all().order_by('-fecha_inicio'))
+    convocatorias = list(
+        Convocatoria.objects.annotate(total_carreras=Count('cupocarrera', distinct=True))
+        .order_by('-fecha_inicio')
+    )
     hoy = date.today()
 
     for conv in convocatorias:
@@ -422,8 +427,8 @@ def convocatorias_lista(request):
 
     return render(request, 'panel/convocatorias_lista.html', {'convocatorias': convocatorias})
 
-@panel_required
 
+@panel_required
 def convocatoria_crear(request):
     # Si se llega desde el detalle de un proceso anterior ("Nuevo proceso"),
     # al guardar se vuelve a ese proceso para reintegrar a sus estudiantes.
@@ -564,9 +569,8 @@ def convocatoria_detalle(request, convocatoria_id):
 def reintegrar_postulantes(request, convocatoria_id):
     """Pasa a los estudiantes que se quedaron en un proceso anterior al
     proceso elegido (actual o nuevo). Crea una inscripción nueva en el
-    proceso destino con la misma carrera y le copia los documentos que ya
-    tenía (salvo los rechazados), para que no tenga que volver a subirlos.
-    La inscripción del proceso anterior se conserva como historial."""
+    proceso destino con la misma carrera. La inscripción del proceso
+    anterior se conserva como historial."""
     origen = get_object_or_404(Convocatoria, id=convocatoria_id)
     if request.method != 'POST':
         return redirect('panel:convocatoria_detalle', convocatoria_id=origen.id)
@@ -601,17 +605,12 @@ def reintegrar_postulantes(request, convocatoria_id):
             if anterior.carrera_id not in carreras_destino:
                 sin_carrera.append(f'{anterior.postulante.nombre_completo} ({anterior.carrera.nombre})')
                 continue
+            # CORREGIDO: antes se creaba la inscripción dos veces (duplicados)
             nueva = Inscripcion.objects.create(
                 postulante=anterior.postulante,
                 convocatoria=destino,
                 carrera=anterior.carrera,
             )
-            nueva = Inscripcion.objects.create(
-                postulante=anterior.postulante,
-                convocatoria=destino,
-                carrera=anterior.carrera,
-            )
-            nueva.actualizar_estado_por_documentos()
             nueva.actualizar_estado_por_documentos()
             if avisar:
                 notificar_reintegro(nueva, origen)
@@ -629,6 +628,46 @@ def reintegrar_postulantes(request, convocatoria_id):
             f'"{destino.nombre}": {", ".join(sin_carrera)}. Agrega esa carrera al proceso y vuelve a intentarlo.'
         )
     return redirect(f"{reverse('panel:convocatoria_detalle', args=[origen.id])}?destino={destino.id}")
+
+
+@panel_required
+def eliminar_postulantes(request, convocatoria_id):
+    """Elimina de este proceso las inscripciones marcadas (y sus documentos).
+    La cuenta y los datos personales del postulante se conservan."""
+    from django.db.models import ProtectedError
+
+    convocatoria = get_object_or_404(Convocatoria, id=convocatoria_id)
+    volver = reverse('panel:convocatoria_detalle', args=[convocatoria.id])
+    destino_id = request.POST.get('destino', '')
+    if destino_id.isdigit():
+        volver = f'{volver}?destino={destino_id}'
+
+    if request.method != 'POST':
+        return redirect(volver)
+
+    ids = [i for i in request.POST.getlist('inscripciones') if i.isdigit()]
+    if not ids:
+        messages.error(request, 'No seleccionaste ningún postulante.')
+        return redirect(volver)
+
+    seleccion = Inscripcion.objects.filter(id__in=ids, convocatoria=convocatoria)
+    total = seleccion.count()
+    try:
+        with transaction.atomic():
+            for inscripcion in seleccion:
+                for doc in inscripcion.documentos.all():
+                    if doc.archivo:
+                        doc.archivo.delete(save=False)
+                inscripcion.delete()
+    except ProtectedError:
+        messages.error(
+            request,
+            'No se pudo eliminar: alguno de los postulantes ya tiene resultados u otros registros asociados.'
+        )
+        return redirect(volver)
+
+    messages.success(request, f'{total} postulante(s) eliminado(s) de "{convocatoria.nombre}".')
+    return redirect(volver)
 
 
 @panel_required
@@ -660,6 +699,37 @@ def convocatoria_cambiar_estado(request, convocatoria_id):
             messages.success(request, f'El proceso "{convocatoria.nombre}" fue activado. Ya aparece en Carreras.')
         else:
             messages.success(request, f'El proceso "{convocatoria.nombre}" fue pausado. Ya no aparece en Carreras.')
+    return redirect('panel:convocatorias_lista')
+
+
+@panel_required
+def convocatorias_eliminar(request):
+    """NUEVO: elimina los procesos marcados con casilla en la lista.
+    No elimina los que ya tienen postulantes inscritos (se sugiere pausarlos)."""
+    if request.method != 'POST':
+        return redirect('panel:convocatorias_lista')
+
+    ids = [i for i in request.POST.getlist('convocatorias') if i.isdigit()]
+    if not ids:
+        messages.error(request, 'No marcaste ningún proceso.')
+        return redirect('panel:convocatorias_lista')
+
+    eliminados, con_postulantes = [], []
+    for conv in Convocatoria.objects.filter(id__in=ids):
+        if Inscripcion.objects.filter(convocatoria=conv).exists():
+            con_postulantes.append(conv.nombre)
+        else:
+            conv.delete()
+            eliminados.append(conv.nombre)
+
+    if eliminados:
+        messages.success(request, f'Se eliminó: {", ".join(eliminados)}.')
+    if con_postulantes:
+        messages.warning(
+            request,
+            f'No se pudo eliminar {", ".join(con_postulantes)} porque tiene postulantes inscritos. '
+            'Puedes pausarlo para que no se ofrezca más.'
+        )
     return redirect('panel:convocatorias_lista')
 
 
@@ -747,22 +817,23 @@ def vista_documento(request, documento_id):
     return render(request, 'panel/vista_documento.html', {'documento': documento})
 
 
+def _nombre_archivo(texto):
+    import re
+    import unicodedata
+    texto = unicodedata.normalize('NFD', texto).encode('ascii', 'ignore').decode()
+    return re.sub(r'[^A-Za-z0-9]+', '_', texto).strip('_')
+
+
 @panel_required
 def descargar_documentos(request, inscripcion_id):
     """Descarga en un solo .zip todos los documentos que subió el postulante."""
     import io
     import os
-    import re
-    import unicodedata
     import zipfile
 
     inscripcion = get_object_or_404(Inscripcion.objects.select_related('postulante'), id=inscripcion_id)
 
-    def limpiar(texto):
-        texto = unicodedata.normalize('NFD', texto).encode('ascii', 'ignore').decode()
-        return re.sub(r'[^A-Za-z0-9]+', '_', texto).strip('_')
-
-    nombre_postulante = limpiar(inscripcion.postulante.nombre_completo)
+    nombre_postulante = _nombre_archivo(inscripcion.postulante.nombre_completo)
     memoria = io.BytesIO()
     agregados = 0
     with zipfile.ZipFile(memoria, 'w', zipfile.ZIP_DEFLATED) as z:
@@ -770,7 +841,7 @@ def descargar_documentos(request, inscripcion_id):
             try:
                 with doc.archivo.open('rb') as f:
                     extension = os.path.splitext(doc.archivo.name)[1].lower()
-                    z.writestr(f'{limpiar(doc.get_tipo_display())}_{nombre_postulante}{extension}', f.read())
+                    z.writestr(f'{_nombre_archivo(doc.get_tipo_display())}_{nombre_postulante}{extension}', f.read())
                     agregados += 1
             except (FileNotFoundError, OSError):
                 continue
@@ -782,13 +853,6 @@ def descargar_documentos(request, inscripcion_id):
     response = HttpResponse(memoria.getvalue(), content_type='application/zip')
     response['Content-Disposition'] = f'attachment; filename="Documentos_{nombre_postulante}_{inscripcion.numero_postulacion}.zip"'
     return response
-
-
-def _nombre_archivo(texto):
-    import re
-    import unicodedata
-    texto = unicodedata.normalize('NFD', texto).encode('ascii', 'ignore').decode()
-    return re.sub(r'[^A-Za-z0-9]+', '_', texto).strip('_')
 
 
 @panel_required

@@ -24,6 +24,9 @@
                                     <h3>{{ tarjeta.carrera.nombre }}</h3>
                                     <p class="carrera-descripcion">{{ tarjeta.info.resumen }}</p>
                                     {% if tarjeta.pausada %}<span class="ver-mas ver-mas-cerrada">Cerrada por el momento</span>{% else %}<span class="ver-mas">Ver más de esta carrera →</span>{% endif %}
+                                    {% if tarjeta.malla_url %}
+                                        <a href="{{ tarjeta.malla_url }}" download class="btn-malla" onclick="event.stopPropagation();">📥 Descargar malla curricular</a>
+                                    {% endif %}
                                 </div>
                             {% endif %}
                         </div>
@@ -105,6 +108,10 @@
                     <h4>A dónde puedes llegar</h4>
                     <p>{{ info.salidas }}</p>
 
+                    {% if info.malla_url %}
+                        <a href="{{ info.malla_url }}" download class="btn-malla btn-malla-modal">📥 Descargar malla curricular</a>
+                    {% endif %}
+
                     {% if user.is_authenticated %}
                         {% if info.carrera_id %}
                             <form method="post" action="{% url 'iniciar_postulacion' %}">
@@ -122,6 +129,26 @@
             </div>
         </div>
     {% endfor %}
+
+    <style>
+        .btn-malla {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 12px;
+            padding: 9px 14px;
+            border: 1.5px solid #558B2F;
+            border-radius: 10px;
+            background: #fff;
+            color: #33691E;
+            font-weight: 700;
+            font-size: 14px;
+            text-decoration: none;
+            transition: background .15s, color .15s;
+        }
+        .btn-malla:hover { background: #558B2F; color: #fff; }
+        .btn-malla-modal { width: 100%; justify-content: center; margin: 16px 0 4px; padding: 12px; box-sizing: border-box; }
+    </style>
 
     <script>
         document.querySelectorAll('.carrera-card').forEach(function(card) {
