@@ -75,6 +75,17 @@
                 </a>
             </div>
 
+            {# El reintegro se hace en un solo lugar: el detalle del proceso. #}
+            {% if resumen_avance.no_completaron %}
+                <div class="config-reintegro-aviso {% if proceso_finalizado %}es-finalizado{% endif %}">
+                    <div>
+                        <strong>{{ resumen_avance.no_completaron }} estudiante(s) no completaron "{{ proceso.nombre }}".</strong>
+                        <span>{% if proceso_finalizado %}Puedes pasarlos a un proceso abierto desde la página del proceso.{% else %}El proceso sigue abierto; cuando termine podrás reintegrarlos a un proceso nuevo.{% endif %}</span>
+                    </div>
+                    <a href="{% url 'panel:convocatoria_detalle' proceso.id %}" class="btn-sm {% if not proceso_finalizado %}btn-secundario{% endif %}">{% if proceso_finalizado %}↩ Reintegrar estudiantes →{% else %}Ver proceso →{% endif %}</a>
+                </div>
+            {% endif %}
+
             <div class="panel-tabla-card" style="margin-top:16px;">
                 <form method="get" class="panel-filtros">
                     <input type="hidden" name="proceso" value="{{ proceso.id }}">
@@ -89,19 +100,9 @@
                 </form>
 
                 {% if pagina.object_list %}
-                    <form method="post" action="{% url 'panel:reintegrar_postulantes' proceso.id %}"
-                          data-confirmar-titulo="¿Reintegrar postulantes?"
-                          data-confirmar-validar-grupo="inscripciones"
-                          data-confirmar-validar-mensaje="Marca al menos un postulante."
-                          data-confirmar-requerido="destino"
-                          data-confirmar-requerido-mensaje="Elige a qué proceso reintegrarlos."
-                          data-confirmar-texto-plantilla="Se pasarán {n} postulante(s) al proceso {destino}."
-                          data-confirmar-boton="Sí, reintegrar">
-                        {% csrf_token %}
                         <table class="tabla-postulantes">
                             <thead>
                                 <tr>
-                                    <th style="width:40px;"><input type="checkbox" id="marcar-todos-config" title="Seleccionar todos" style="accent-color:var(--primario);"></th>
                                     <th>Postulante</th>
                                     <th>Carrera</th>
                                     <th>Documentos subidos</th>
@@ -111,7 +112,6 @@
                             <tbody>
                                 {% for inscripcion in pagina.object_list %}
                                     <tr>
-                                        <td><input type="checkbox" name="inscripciones" value="{{ inscripcion.id }}" class="chk-reintegrar-config" style="accent-color:var(--primario);"></td>
                                         <td>
                                             <a href="{% url 'panel:detalle_postulante' inscripcion.id %}" class="fila-link">
                                                 <span class="postulante-nombre">{{ inscripcion.postulante.nombre_completo }}</span>
@@ -125,27 +125,7 @@
                                 {% endfor %}
                             </tbody>
                         </table>
-                        {% if pagina.has_other_pages %}
-                            <div class="panel-paginacion">
-                                <span>Mostrando {{ pagina.start_index }}–{{ pagina.end_index }} de {{ pagina.paginator.count }}</span>
-                                <div class="paginas">
-                                    {% if pagina.has_previous %}<a href="?proceso={{ proceso.id }}&q={{ filtro_q }}&avance={{ filtro_avance }}&pagina={{ pagina.previous_page_number }}">‹</a>{% endif %}
-                                    <span class="pagina-actual">{{ pagina.number }}</span>
-                                    {% if pagina.has_next %}<a href="?proceso={{ proceso.id }}&q={{ filtro_q }}&avance={{ filtro_avance }}&pagina={{ pagina.next_page_number }}">›</a>{% endif %}
-                                </div>
-                            </div>
-                        {% endif %}
-                        <div class="panel-paginacion">
-                            <span id="contador-seleccion-config">0 seleccionados</span>
-                            <select name="destino" style="width:auto; margin-left:auto;">
-                                <option value="">Seleccionar proceso</option>
-                                {% for d in destinos_abiertos %}
-                                    <option value="{{ d.id }}">{{ d.nombre }}</option>
-                                {% endfor %}
-                            </select>
-                            <button type="submit" class="btn-sm btn">Reintegrar</button>
-                        </div>
-                    </form>
+                        {% include 'panel/_paginacion.html' with pagina=pagina nombre='postulantes' %}
                 {% else %}
                     <div class="sin-resultados">No hay postulantes con esos filtros.</div>
                 {% endif %}
@@ -153,24 +133,6 @@
         {% endif %}
     </div>
 
-    <script>
-        (function () {
-            const todos = document.getElementById('marcar-todos-config');
-            const checks = document.querySelectorAll('.chk-reintegrar-config');
-            const contador = document.getElementById('contador-seleccion-config');
-            function actualizar() {
-                const n = document.querySelectorAll('.chk-reintegrar-config:checked').length;
-                if (contador) contador.textContent = n + ' seleccionado' + (n === 1 ? '' : 's');
-            }
-            if (todos) {
-                todos.addEventListener('change', () => {
-                    checks.forEach(c => { c.checked = todos.checked; });
-                    actualizar();
-                });
-            }
-            checks.forEach(c => c.addEventListener('change', actualizar));
-        })();
-    </script>
 
     <!-- 4. Personal -->
     <div class="tarjeta">
@@ -186,7 +148,7 @@
                     {% if usuario.is_superuser %}
                         <span class="badge badge-primario">Administrador principal</span>
                     {% elif usuario.rol == 'admin_admision' %}
-                        <span class="badge badge-exito">Personal de admisión</span>
+                        <span class="badge badge-exito">Administrador secundario · solo lectura</span>
                     {% else %}
                         <span class="badge badge-primario">Administrador (staff)</span>
                     {% endif %}
@@ -212,9 +174,9 @@
                 <label for="nuevo-personal">Dar acceso al panel a otra persona</label>
                 <div class="personal-agregar-fila">
                     <input type="text" id="nuevo-personal" name="usuario" placeholder="Usuario, correo o cédula de su cuenta" required>
-                    <button type="submit" class="btn-sm">Agregar como personal</button>
+                    <button type="submit" class="btn-sm">Agregar como secundario</button>
                 </div>
-                <span class="campo-ayuda">La persona primero debe crear su cuenta en "Registrarse".</span>
+                <span class="campo-ayuda">La persona primero debe crear su cuenta en "Registrarse". Entrará como <strong>administrador secundario</strong>: podrá ver todo el panel, pero no crear, editar ni eliminar nada.</span>
             </form>
         {% endif %}
     </div>

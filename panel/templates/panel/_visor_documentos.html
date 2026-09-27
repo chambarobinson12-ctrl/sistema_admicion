@@ -35,7 +35,7 @@ página, aprobarlo o rechazarlo, y pasar al siguiente con las flechas.
                     {% csrf_token %}
                     <input type="hidden" name="next" value="{{ request.get_full_path }}">
                     <label for="visor-observaciones">Observación (se envía al postulante si lo rechazas)</label>
-                    <textarea name="observaciones" id="visor-observaciones" class="doc-observaciones-input" placeholder="Ej. La foto de la cédula está borrosa"></textarea>
+                    <textarea name="observaciones" id="visor-observaciones" class="doc-observaciones-input" placeholder="Ej. El certificado está borroso o no corresponde a este paso"></textarea>
                     <div class="doc-acciones">
                         <button type="submit" name="accion" value="aprobar" class="btn-sm btn-exito">✓ Aprobar</button>
                         <button type="submit" name="accion" value="rechazar" class="btn-sm btn-peligro-outline">✕ Rechazar</button>

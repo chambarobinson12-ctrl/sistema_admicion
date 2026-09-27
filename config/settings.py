@@ -49,6 +49,9 @@ INSTALLED_APPS = [
     'panel',
 ]
 AUTH_USER_MODEL = 'usuarios.Usuario'
+# Tipo de id de las tablas. AutoField es el que ya usan todas (no crea migraciones)
+# y quita los avisos amarillos W042 al ejecutar cualquier comando.
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'inicio'
 AUTHENTICATION_BACKENDS = ['usuarios.backends.UsuarioOCorreoBackend']

@@ -1,0 +1,16 @@
+<div class="tuto-video">
+    {% if tutorial.youtube_embed %}
+        <iframe src="{{ tutorial.youtube_embed }}" title="{{ tutorial.titulo }}" loading="lazy"
+                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    {% elif tutorial.video_url %}
+        <a href="{{ tutorial.video_url }}" target="_blank" rel="noopener" class="tuto-video-vacio">
+            <span class="tuto-play"></span>
+            <span>Abrir el video tutorial</span>
+        </a>
+    {% else %}
+        <div class="tuto-video-vacio">
+            <span class="tuto-play tuto-play-gris"></span>
+            <span>El video estará disponible pronto.</span>
+        </div>
+    {% endif %}
+</div>

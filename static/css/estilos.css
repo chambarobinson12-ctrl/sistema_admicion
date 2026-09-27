@@ -4307,3 +4307,143 @@ body.reg-solo {
     margin: 0;
     padding: 0;
 }
+/* =====================================================================
+   Detalle de proceso: estudiantes que no completaron + reintegro
+   Todo en una sola tarjeta: filtros → tabla → barra de acciones abajo.
+   ===================================================================== */
+.stat-card-de { font-size: 14px; font-weight: 600; color: var(--texto-tenue); }
+
+.resumen-carreras summary {
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; list-style: none;
+}
+.resumen-carreras summary::-webkit-details-marker { display: none; }
+.resumen-carreras summary .campo-ayuda::after { content: ' ▾'; }
+.resumen-carreras[open] summary .campo-ayuda::after { content: ' ▴'; }
+
+.reintegro-card { overflow: visible; }
+.reintegro-cabecera { padding: 20px 20px 4px; }
+.reintegro-titulo { font-size: 17px; margin: 0; color: var(--texto); }
+.reintegro-pasos {
+    display: flex; flex-wrap: wrap; gap: 8px 18px;
+    list-style: none; padding: 0; margin: 10px 0 0;
+    font-size: 13px; color: var(--texto-muted);
+}
+.reintegro-pasos li { display: flex; align-items: center; gap: 7px; }
+.reintegro-pasos li span {
+    display: inline-grid; place-items: center;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--primario); color: #fff; font-weight: 700; font-size: 12px;
+}
+
+.reintegro-filtros { align-items: center; }
+.pestanas { display: flex; gap: 4px; margin-right: auto; background: var(--fondo); border: 1px solid var(--borde); border-radius: 10px; padding: 3px; }
+.pestana {
+    padding: 7px 13px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    color: var(--texto-muted); text-decoration: none; white-space: nowrap;
+}
+.pestana b { margin-left: 4px; font-weight: 700; color: var(--texto-tenue); }
+.pestana:hover { color: var(--texto); }
+.pestana.activa { background: #fff; color: var(--primario-oscuro); box-shadow: 0 1px 3px rgba(51,105,30,.15); }
+.pestana.activa b { color: var(--primario); }
+
+.acciones-barra {
+    position: sticky; bottom: 0; z-index: 5;
+    display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
+    padding: 14px 20px;
+    background: #fff;
+    border-top: 2px solid var(--acento-suave-2);
+    border-radius: 0 0 var(--radio) var(--radio);
+    box-shadow: 0 -6px 16px rgba(51, 105, 30, 0.08);
+}
+.acciones-contador { font-size: 13px; font-weight: 700; color: var(--texto-muted); min-width: 110px; }
+.acciones-destino { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 13px; font-weight: 700; }
+.acciones-destino select { width: auto; margin: 0; padding: 8px 12px; font-size: 13px; font-weight: 600; border-radius: 8px; }
+.acciones-aviso { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 12.5px; font-weight: 500; color: var(--texto-muted); }
+.acciones-aviso input { width: auto; margin: 0; accent-color: var(--primario); }
+.acciones-reintegrar { padding: 10px 18px; font-size: 13.5px; }
+.acciones-separador { flex: 1; }
+.acciones-eliminar { padding: 8px 14px; }
+.acciones-sin-destino { font-size: 13px; color: var(--alerta-texto); background: var(--alerta-suave); padding: 8px 12px; border-radius: 8px; }
+.acciones-nota { padding: 0 20px 16px; margin: 0; }
+.btn-peligro-outline:disabled { background: #fff; color: oklch(0.7 0.01 90); border-color: oklch(0.88 0.01 90); }
+.reintegro-conteo { margin-right: auto; font-size: 13.5px; }
+
+/* Configuración: aviso que lleva al reintegro (se hace en el detalle del proceso) */
+.config-reintegro-aviso {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+    margin-top: 16px; padding: 14px 18px; border-radius: 12px;
+    background: var(--fondo); border: 1px solid var(--borde);
+}
+.config-reintegro-aviso.es-finalizado { background: var(--alerta-suave); border-color: #f0d9a8; }
+.config-reintegro-aviso strong { display: block; font-size: 14px; color: var(--texto); }
+.config-reintegro-aviso span { font-size: 13px; color: var(--texto-muted); }
+
+/* Paginación con números (1 2 3 …), de 10 en 10 */
+.paginacion-numeros {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+    padding: 14px 20px; border-top: 1px solid var(--borde-suave);
+}
+.paginacion-info { font-size: 13px; color: var(--texto-muted); }
+.paginacion-info b { color: var(--texto); }
+.paginacion-botones { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pag-btn {
+    min-width: 36px; height: 36px; padding: 0 10px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 9px; border: 1px solid var(--borde); background: #fff;
+    font-size: 13.5px; font-weight: 700; color: var(--texto); text-decoration: none;
+}
+.pag-btn:hover { background: var(--acento-suave); border-color: var(--acento-suave-2); color: var(--primario-oscuro); }
+.pag-btn.actual { background: var(--primario); border-color: var(--primario); color: #fff; }
+.pag-btn.deshabilitado { color: oklch(0.75 0.01 90); background: #fff; cursor: default; }
+.pag-flecha { font-weight: 600; font-size: 13px; }
+.pag-puntos { padding: 0 4px; color: var(--texto-tenue); font-weight: 700; }
+.acciones-barra + .paginacion-numeros, .paginacion-numeros + .acciones-barra { border-top: 1px solid var(--borde-suave); }
+
+/* Reintegro: motivo + mensaje que se envía por correo */
+.acciones-extra {
+    flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px;
+    padding-top: 12px; border-top: 1px dashed var(--borde);
+}
+.acciones-extra-label { margin: 0; font-size: 13px; font-weight: 700; }
+.acciones-extra-label span { font-weight: 500; color: var(--texto-tenue); }
+.acciones-extra input { flex: 1; min-width: 260px; margin: 0; padding: 8px 12px; font-size: 13px; border-radius: 8px; }
+.acciones-correo { flex-basis: 100%; font-size: 12.5px; color: var(--primario-texto); }
+
+/* Detalle del postulante: validar / rechazar proceso */
+.decision-barra { align-items: center; }
+.decision-texto { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; flex: 1; min-width: 260px; }
+.decision-texto p { margin: 0; }
+.decision-badge { font-size: 12.5px; padding: 6px 12px; }
+.decision-botones { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.decision-botones button { margin-top: 0; }
+.decision-validar { padding: 9px 18px; }
+.btn-peligro { background: var(--peligro); color: #fff; border: 1px solid var(--peligro); box-shadow: none; }
+.btn-peligro:hover { background: var(--peligro-texto); }
+
+.decision-dialogo {
+    position: fixed; inset: 0; margin: auto; height: fit-content; max-height: calc(100vh - 32px); overflow: auto;
+    width: min(560px, calc(100vw - 32px)); border: none; border-radius: 16px; padding: 22px 24px;
+    box-shadow: 0 20px 60px rgba(31, 58, 11, .25); color: var(--texto);
+}
+.decision-dialogo::backdrop { background: rgba(31, 58, 11, .45); }
+.decision-dialogo-cab { display: flex; align-items: center; justify-content: space-between; }
+.decision-dialogo-cab h3 { margin: 0; font-size: 18px; }
+.decision-cerrar { background: none; border: none; box-shadow: none; color: var(--texto-muted); font-size: 24px; padding: 0 4px; margin: 0; cursor: pointer; }
+.decision-cerrar:hover { background: none; color: var(--texto); transform: none; }
+.decision-opciones { display: grid; gap: 8px; margin-bottom: 16px; }
+.decision-opcion { display: flex; gap: 10px; align-items: flex-start; margin: 0; padding: 11px 13px; border: 1px solid var(--borde); border-radius: 10px; cursor: pointer; font-weight: 500; }
+.decision-opcion:has(input:checked) { border-color: var(--primario); background: var(--primario-suave); }
+.decision-opcion.peligro:has(input:checked) { border-color: var(--peligro); background: var(--peligro-suave); }
+.decision-opcion input { width: auto; margin: 3px 0 0; accent-color: var(--primario); }
+.decision-opcion strong { display: block; font-size: 14px; }
+.decision-opcion small { display: block; font-size: 12.5px; color: var(--texto-muted); margin-top: 2px; line-height: 1.4; }
+.decision-label { display: block; font-size: 13px; font-weight: 700; margin: 0 0 6px; }
+.decision-docs { display: grid; gap: 4px; margin-bottom: 14px; }
+.decision-doc { display: flex; align-items: center; gap: 9px; margin: 0; padding: 7px 10px; border-radius: 8px; font-size: 13.5px; font-weight: 500; cursor: pointer; }
+.decision-doc:hover { background: var(--fondo); }
+.decision-doc input { width: auto; margin: 0; accent-color: var(--peligro); }
+.decision-doc em { margin-left: auto; font-style: normal; font-size: 11.5px; color: var(--texto-tenue); }
+.decision-dialogo textarea { width: 100%; margin: 0; font-size: 13.5px; }
+.decision-dialogo-pie { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.decision-dialogo-pie button { margin-top: 0; }

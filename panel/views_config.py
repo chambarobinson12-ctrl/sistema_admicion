@@ -8,6 +8,8 @@
 - Configuración > Personal de admisión: dar o quitar acceso al panel.
 """
 
+from datetime import date
+
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.core.paginator import Paginator
@@ -19,6 +21,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from convocatorias.models import Convocatoria, Carrera
 from postulantes.models import Inscripcion, Documento
 from .decorators import panel_required
+from .paginacion import paginar
 from .notificaciones import notificar_decision_inscripcion, notificar_reintegro, notificar_comentario
 
 
@@ -40,7 +43,7 @@ def _convocatoria_elegida(request, parametro='proceso'):
 
 
 def _resumen_proceso(convocatoria):
-    """Postulantes de un proceso según su avance: completo (subió los 4
+    """Postulantes de un proceso según su avance: completo (subió los 5
     documentos), incompleto (le falta alguno o debe volver a subirlo) o
     sin documentos (vacío)."""
     inscripciones = Inscripcion.objects.filter(convocatoria=convocatoria).prefetch_related('documentos')
@@ -52,6 +55,8 @@ def _resumen_proceso(convocatoria):
         'completos': conteo['completo'],
         'incompletos': conteo['incompleto'],
         'vacios': conteo['vacio'],
+        # No completaron = incompletos + sin documentos (los que se pueden reintegrar)
+        'no_completaron': conteo['incompleto'] + conteo['vacio'],
     }
 
 
@@ -99,8 +104,7 @@ def revisar_documentos(request):
             n_validados=Count('documentos', filter=Q(documentos__estado='validado'), distinct=True)
         ).filter(n_validados=len(Documento.TIPO_CHOICES))
 
-    paginator = Paginator(inscripciones, 12)
-    pagina = paginator.get_page(request.GET.get('pagina'))
+    pagina = paginar(request, inscripciones)
 
     for inscripcion in pagina.object_list:
         por_tipo = {d.tipo: d for d in inscripcion.documentos.all()}
@@ -183,11 +187,11 @@ def configuracion(request):
             )
         resumen_avance = _resumen_proceso(proceso)
         inscripciones = [i for i in consulta if not filtro_avance or i.avance == filtro_avance]
-    pagina = Paginator(inscripciones, 15).get_page(request.GET.get('pagina'))
+    pagina = paginar(request, inscripciones)
 
-    destinos_abiertos = convocatorias.filter(activa=True)
-    if proceso:
-        destinos_abiertos = destinos_abiertos.exclude(id=proceso.id)
+    # El reintegro ya no se hace aquí: se hace en el detalle del proceso
+    # (Procesos de admisión), para que haya un solo lugar y no se confunda.
+    proceso_finalizado = bool(proceso and proceso.fecha_fin < date.today())
 
     return render(request, 'panel/configuracion.html', {
         'convocatoria_activa': convocatoria_activa,
@@ -199,7 +203,7 @@ def configuracion(request):
         'proceso': proceso,
         'pagina': pagina,
         'resumen_avance': resumen_avance,
-        'destinos_abiertos': destinos_abiertos,
+        'proceso_finalizado': proceso_finalizado,
         'filtro_q': q,
         'filtro_avance': filtro_avance,
     })
@@ -363,8 +367,7 @@ def estados_postulantes(request):
     elif filtro_avance == 'incompleto':
         inscripciones = [i for i in inscripciones if not i.proceso_completo]
 
-    paginator = Paginator(inscripciones, 15)
-    pagina = paginator.get_page(request.GET.get('pagina'))
+    pagina = paginar(request, inscripciones)
     for inscripcion in pagina.object_list:
         faltan = inscripcion.documentos_faltantes
         if faltan:
@@ -375,7 +378,7 @@ def estados_postulantes(request):
                 texto += ' No has subido: ' + ', '.join(no_subidos) + '.'
             if rechazados:
                 texto += ' Debes volver a subir: ' + ', '.join(rechazados) + '.'
-            inscripcion.comentario_sugerido = texto + ' Ingresa a "Mis documentos" y complétalo.'
+            inscripcion.comentario_sugerido = texto + ' Ingresa a "Mi proceso" y complétalo.'
         else:
             inscripcion.comentario_sugerido = ''
 
@@ -390,7 +393,7 @@ def estados_postulantes(request):
 
 @panel_required
 def enviar_comentario(request, inscripcion_id):
-    """Guarda el comentario para el postulante (lo ve en "Mis documentos")
+    """Guarda el comentario para el postulante (lo ve en "Mi proceso")
     y se lo envía por correo."""
     inscripcion = get_object_or_404(Inscripcion.objects.select_related('postulante', 'postulante__usuario', 'carrera'), id=inscripcion_id)
     if request.method != 'POST':
@@ -405,7 +408,7 @@ def enviar_comentario(request, inscripcion_id):
     inscripcion.fecha_comentario = timezone.now()
     inscripcion.save(update_fields=['comentario_revision', 'fecha_comentario'])
     notificar_comentario(inscripcion)
-    messages.success(request, f'Comentario enviado a {inscripcion.postulante.nombre_completo}. Lo verá en "Mis documentos" y en su correo.')
+    messages.success(request, f'Comentario enviado a {inscripcion.postulante.nombre_completo}. Lo verá en "Mi proceso" y en su correo.')
     return _volver(request, 'panel:estados_postulantes')
 
 
@@ -458,11 +461,11 @@ def personal_agregar(request):
     if not usuario:
         messages.error(request, f'No se encontró ninguna cuenta con "{dato}". La persona primero debe registrarse en el sistema.')
     elif usuario.rol == 'admin_admision':
-        messages.info(request, f'{usuario.username} ya es parte del personal de admisión.')
+        messages.info(request, f'{usuario.username} ya es administrador secundario.')
     else:
         usuario.rol = 'admin_admision'
         usuario.save(update_fields=['rol'])
-        messages.success(request, f'{usuario.username} ahora es personal de admisión y puede entrar al panel.')
+        messages.success(request, f'{usuario.username} ahora es administrador secundario: puede entrar al panel solo para ver.')
     return redirect('panel:configuracion')
 
 

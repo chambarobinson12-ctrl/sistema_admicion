@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Tutorial de matriculación - ISTAM{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/tutorial.css' %}">{% endblock %}
+
+{% block content %}
+<div class="tuto">
+
+    <div class="tuto-hero">
+        <div>
+            <span class="tuto-tag">{% if puede_editar %}Vista del administrador{% else %}Guía para postulantes{% endif %}</span>
+            <h1>Tutorial de matriculación</h1>
+            <p>Mira el video, reúne los requisitos y acércate a Secretaría a entregarlos para completar tu matrícula.</p>
+        </div>
+        <div class="tuto-pasos">
+            <div><b>1</b>Mira el video</div>
+            <div><b>2</b>Reúne los requisitos</div>
+            <div><b>3</b>Entrégalos en Secretaría</div>
+        </div>
+    </div>
+
+    {% if puede_editar %}
+    <form method="post" class="tuto-grid">
+        {% csrf_token %}
+        <section class="tuto-card">
+            <h2><span class="tuto-ico">▶️</span> Video tutorial</h2>
+            <p class="tuto-hint">Pega el enlace del video de YouTube.</p>
+            <label for="video_url">Enlace del video</label>
+            <input type="url" id="video_url" name="video_url" value="{{ tutorial.video_url }}" placeholder="https://www.youtube.com/watch?v=..." maxlength="200">
+            <label>Vista previa</label>
+            {% include 'postulantes/_tutorial_video.html' %}
+        </section>
+
+        <section class="tuto-card">
+            <h2><span class="tuto-ico">📋</span> Requisitos para la matriculación</h2>
+            <p class="tuto-hint">Pulsa <b>Editar</b> para cambiar el nombre de un requisito.</p>
+            {% for r in requisitos %}
+                <div class="tuto-req" data-req>
+                    <span class="tuto-num">{{ forloop.counter }}</span>
+                    <span class="tuto-req-nombre" data-texto>{{ r.nombre }}</span>
+                    <input type="text" name="requisito_{{ r.pk }}" value="{{ r.nombre }}" maxlength="200" required data-campo hidden>
+                    <button type="button" class="tuto-btn-editar" data-editar>✏️ Editar</button>
+                    <button type="button" class="tuto-btn-cancelar" data-cancelar hidden>Cancelar</button>
+                </div>
+            {% empty %}
+                <p class="tuto-hint">No hay requisitos registrados.</p>
+            {% endfor %}
+            <div class="tuto-aviso-admin">ℹ️ El postulante verá: <b>“Reúne estos requisitos y acércate a Secretaría del Instituto a entregarlos.”</b></div>
+        </section>
+
+        <div class="tuto-pie">
+            <span>Última modificación: {{ tutorial.actualizado|date:"d/m/Y · H:i" }}</span>
+            <button type="submit" class="tuto-guardar">💾 Guardar cambios</button>
+        </div>
+    </form>
+
+    <script>
+        document.querySelectorAll('[data-req]').forEach((fila) => {
+            const texto = fila.querySelector('[data-texto]');
+            const campo = fila.querySelector('[data-campo]');
+            const editar = fila.querySelector('[data-editar]');
+            const cancelar = fila.querySelector('[data-cancelar]');
+            const original = campo.value;
+            editar.addEventListener('click', () => {
+                texto.hidden = true; editar.hidden = true;
+                campo.hidden = false; cancelar.hidden = false;
+                fila.classList.add('editando');
+                campo.focus(); campo.select();
+            });
+            cancelar.addEventListener('click', () => {
+                campo.value = original;
+                texto.hidden = false; editar.hidden = false;
+                campo.hidden = true; cancelar.hidden = true;
+                fila.classList.remove('editando');
+            });
+        });
+    </script>
+    {% else %}
+    <div class="tuto-grid tuto-grid-postulante">
+        <section class="tuto-card">
+            {% include 'postulantes/_tutorial_video.html' %}
+            <h3 class="tuto-video-titulo">{{ tutorial.titulo }}</h3>
+            {% if tutorial.descripcion %}<p class="tuto-hint">{{ tutorial.descripcion }}</p>{% endif %}
+        </section>
+
+        <section class="tuto-card">
+            <h2><span class="tuto-ico">📋</span> Requisitos para matricularte</h2>
+            <p class="tuto-hint">Ten listos estos documentos:</p>
+            <ol class="tuto-lista">
+                {% for r in requisitos %}
+                    <li><span class="tuto-num tuto-num-suave">{{ forloop.counter }}</span>{{ r.nombre }}</li>
+                {% empty %}
+                    <li>Pronto publicaremos los requisitos.</li>
+                {% endfor %}
+            </ol>
+            <div class="tuto-secretaria">
+                <span class="tuto-secretaria-ico">🏫</span>
+                <span><b>Acércate a Secretaría</b><br>Reúne todos estos requisitos y entrégalos personalmente en la Secretaría del Instituto.</span>
+            </div>
+        </section>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -8,35 +8,35 @@
             <div class="paso-item paso-hecho">
                 <div class="paso-circulo">✓</div>
                 <strong>Registro</strong>
-                <p>Crea tu cuenta con tus datos personales en unos minutos.</p>
+                <p>Llena tus datos y sube tu certificado de registro.</p>
             </div>
             <div class="paso-linea paso-linea-hecha"></div>
 
             <div class="paso-item paso-actual">
                 <div class="paso-circulo">2</div>
                 <strong>Inscripción</strong>
-                <p>Postúlate a la carrera de tu preferencia dentro del proceso activo.</p>
+                <p>Sube tu certificado de inscripción del proceso de admisión.</p>
             </div>
             <div class="paso-linea"></div>
 
             <div class="paso-item paso-pendiente">
                 <div class="paso-circulo">3</div>
                 <strong>Evaluación</strong>
-                <p>Cédula, certificado de votación, título de bachiller y foto, todo desde la plataforma.</p>
+                <p>Rinde el examen y sube el documento con tu nota obtenida.</p>
             </div>
             <div class="paso-linea"></div>
 
             <div class="paso-item paso-pendiente">
                 <div class="paso-circulo">4</div>
                 <strong>Postulación</strong>
-                <p>Rinde el examen de admisión en la fecha asignada.</p>
+                <p>Postula a la carrera y sube tu registro de postulación.</p>
             </div>
             <div class="paso-linea"></div>
 
             <div class="paso-item paso-pendiente">
                 <div class="paso-circulo">5</div>
                 <strong>Aceptación</strong>
-                <p>Conoce el resultado de tu postulación en "Mi proceso".</p>
+                <p>Sube tu certificado de aceptación del cupo.</p>
             </div>
         </div>
     </div>
@@ -64,7 +64,7 @@
                 <div>{{ form.colegio_procedencia.label_tag }}{{ form.colegio_procedencia }}{{ form.colegio_procedencia.errors }}</div>
                 <div style="grid-column:1 / -1;">{{ form.direccion.label_tag }}{{ form.direccion }}{{ form.direccion.errors }}</div>
                 <div style="grid-column:1 / -1;">
-                    <label for="{{ form.foto.id_for_label }}">certificado de registo unico:</label>
+                    <label for="{{ form.foto.id_for_label }}">Certificado de registro:</label>
                         <span class="campo-ayuda" style="display:block; margin-bottom:6px;">PDF, Word, Excel, PowerPoint o imagen (máximo 8 MB).</span>
                     {{ form.foto }}{{ form.foto.errors }}
                 </div>
@@ -118,7 +118,7 @@
             </div>
             {{ form.acepto_terminos.errors }}
 
-            <p class="campo-ayuda" style="margin-top:16px;">Recibirás un número de postulación y podrás subir y dar seguimiento a tus documentos en "Mis documentos".</p>
+            <p class="campo-ayuda" style="margin-top:16px;">Recibirás un número de postulación y podrás subir y dar seguimiento a tus documentos en "Mi proceso".</p>
 
             <div class="wizard-botones">
                 <button type="button" class="btn-secundario" data-atras>Volver atrás</button>

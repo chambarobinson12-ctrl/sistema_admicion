@@ -103,24 +103,7 @@
                 </tbody>
             </table>
 
-              <div class="panel-paginacion">
-                <span>Mostrando {{ pagina.start_index }}–{{ pagina.end_index }} de {{ pagina.paginator.count }} postulantes</span>
-                <div class="paginas">
-                    {% if pagina.has_previous %}
-                        <a href="?pagina={{ pagina.previous_page_number }}&q={{ filtro_q }}&carrera={{ filtro_carrera }}&avance={{ filtro_avance }}&proceso={{ filtro_proceso }}">‹</a>
-                    {% endif %}
-                    {% for numero in pagina.paginator.page_range %}
-                        {% if numero == pagina.number %}
-                            <span class="pagina-actual">{{ numero }}</span>
-                        {% elif numero > pagina.number|add:"-3" and numero < pagina.number|add:"3" %}
-                            <a href="?pagina={{ numero }}&q={{ filtro_q }}&carrera={{ filtro_carrera }}&avance={{ filtro_avance }}&proceso={{ filtro_proceso }}">{{ numero }}</a>
-                        {% endif %}
-                    {% endfor %}
-                    {% if pagina.has_next %}
-                        <a href="?pagina={{ pagina.next_page_number }}&q={{ filtro_q }}&carrera={{ filtro_carrera }}&avance={{ filtro_avance }}&proceso={{ filtro_proceso }}">›</a>
-                    {% endif %}
-                </div>
-            </div>
+            {% include 'panel/_paginacion.html' with pagina=pagina nombre='postulantes' %}
         {% else %}
             <div class="sin-resultados">No se encontraron postulantes con esos filtros.</div>
         {% endif %}

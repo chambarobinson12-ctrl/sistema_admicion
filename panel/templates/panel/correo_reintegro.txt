@@ -1,0 +1,27 @@
+{% autoescape off %}Hola {{ nombre }},
+
+Te informamos que el Instituto Superior Tecnológico Amazónico (ISTAM) te reintegró al proceso de admisión "{{ proceso.nombre }}".
+
+  Carrera: {{ inscripcion.carrera.nombre }}
+  Nuevo N.° de postulación: {{ inscripcion.numero_postulacion }}
+  Proceso anterior: {{ proceso_anterior.nombre }}
+  Plazo para completar: hasta el {{ proceso.fecha_fin|date:"d/m/Y" }}
+{% if concepto %}
+Motivo del reintegro:
+{{ concepto }}
+{% endif %}{% if mensaje %}
+Mensaje del equipo de admisión:
+"{{ mensaje }}"
+{% endif %}
+¿Qué debes hacer ahora?
+  1. Ingresa al sistema de admisión con tu usuario y contraseña.
+  2. Entra a "Mis inscripciones" y abre tu nueva postulación.
+  3. Sube tus documentos desde el paso 1, antes del {{ proceso.fecha_fin|date:"d/m/Y" }}.
+{% if enlace %}
+Ingresar: {{ enlace }}
+{% endif %}
+Tu postulación anterior se conserva como historial; no necesitas crear una cuenta nueva.
+
+Atentamente,
+Departamento de Admisión - ISTAM
+{% endautoescape %}

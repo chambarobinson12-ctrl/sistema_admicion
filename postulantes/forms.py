@@ -6,7 +6,7 @@ class PostulacionForm(forms.ModelForm):
     """Datos personales + carrera a la que postula, usados para registrar
     al estudiante y para que el administrativo pueda ver a qué carrera
     postula cada uno. Después de este registro, el estudiante lleva el
-    control de sus propios documentos en "Mis documentos"."""
+    control de sus propios documentos en "Mi proceso"."""
 
     telefono = forms.CharField(label='Teléfono', max_length=15, required=False)
     carrera = forms.ModelChoiceField(

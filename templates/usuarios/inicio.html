@@ -5,11 +5,29 @@
 {% block content %}
     <div class="hero-panel">
         <div class="hero-texto">
-            <span class="badge-proceso">Admisión 2026-I · Proceso activo</span>
+            {# Se actualiza solo con el proceso de admisión activo (ver usuarios/views.py) #}
+            <div class="hero-proceso">
+                {% if proceso_estado == 'abierto' %}
+                    <span class="badge-proceso">{{ proceso.nombre }} · Proceso activo</span>
+                    <span class="hero-fechas">📅 Inscripciones del {{ proceso.fecha_inicio|date:"j \d\e F" }} al {{ proceso.fecha_fin|date:"j \d\e F \d\e Y" }}</span>
+                {% elif proceso_estado == 'proximo' %}
+                    <span class="badge-proceso">{{ proceso.nombre }} · Próximamente</span>
+                    <span class="hero-fechas">📅 Inscripciones desde el {{ proceso.fecha_inicio|date:"j \d\e F" }} hasta el {{ proceso.fecha_fin|date:"j \d\e F \d\e Y" }}</span>
+                {% else %}
+                    <span class="badge-proceso">Inscripciones cerradas</span>
+                    <span class="hero-fechas">Pronto se abrirá un nuevo proceso de admisión.</span>
+                {% endif %}
+            </div>
+            <style>
+                .hero-proceso { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+                .hero-fechas { display:inline-block; padding:5px 12px; border-radius:999px; background:rgba(255,255,255,.14); color:#fff; font-size:13px; font-weight:600; margin-bottom:12px; }
+            </style>
             <h1>Tu admisión al Instituto Superior Tecnológico Amazónico, paso a paso</h1>
             <p>Regístrate, elige una de nuestras 4 carreras tecnológicas, sube tus documentos y da seguimiento a todo tu proceso de admisión desde un solo lugar.</p>
             <div class="hero-cta">
-                {% if user.is_authenticated %}
+                {% if user.is_superuser or user.is_staff or user.rol == 'admin_admision' %}
+                    <a href="/panel/" class="btn hero-btn-primario">Ir al panel administrativo</a>
+                {% elif user.is_authenticated %}
                     <a href="{% url 'mis_inscripciones' %}" class="btn hero-btn-primario">Ver mi Proceso</a>
                 {% else %}
                     <a href="{% url 'registro' %}" class="btn hero-btn-primario">Regístrate ahora</a>

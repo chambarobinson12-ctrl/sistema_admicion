@@ -59,13 +59,8 @@ class Inscripcion(models.Model):
     pasos_marcados = models.CharField(max_length=200, blank=True)
 
     class Meta:
+        unique_together = ('postulante', 'convocatoria')
         ordering = ['-fecha_inscripcion']
-        constraints = [
-            models.UniqueConstraint(
-                fields=['postulante', 'convocatoria'],
-                name='uniq_inscripcion_postulante_convocatoria',
-            ),
-        ]
 
     def __str__(self):
         return f"{self.postulante} - {self.carrera} ({self.estado})"
@@ -112,7 +107,7 @@ class Inscripcion(models.Model):
 
     @property
     def avance_documentos(self):
-        """Los 5 documentos requeridos (uno por paso) con su situación, en orden:
+        """Los 4 documentos requeridos con su situación, en orden:
         'subido' (✓), 'rechazado' (hay que volver a subirlo) o 'falta'."""
         cortos = {
             'certificado_registro': 'Registro', 'certificado_inscripcion': 'Inscripción',
@@ -230,13 +225,8 @@ class Documento(models.Model):
     )
 
     class Meta:
+        unique_together = ('inscripcion', 'tipo')
         ordering = ['tipo']
-        constraints = [
-            models.UniqueConstraint(
-                fields=['inscripcion', 'tipo'],
-                name='uniq_documento_inscripcion_tipo',
-            ),
-        ]
 
     def get_tipo_display(self):
         return dict(self.TIPO_CHOICES).get(self.tipo) or self.TIPOS_ANTERIORES.get(self.tipo, self.tipo)
@@ -327,18 +317,3 @@ class TutorialInscripcion(models.Model):
             return ''
         m = re.search(r'(?:youtube\.com/(?:watch\?(?:.*&)?v=|embed/|shorts/|live/)|youtu\.be/)([A-Za-z0-9_-]{11})', self.video_url)
         return f'https://www.youtube.com/embed/{m.group(1)}' if m else ''
-
-class RequisitoMatricula(models.Model):
-    """Requisitos que el postulante debe llevar a Secretaría para matricularse.
-    Se muestran en la página del tutorial de matriculación. El administrador
-    principal solo puede cambiar el nombre de cada uno."""
-    orden = models.PositiveSmallIntegerField('Orden', default=0)
-    nombre = models.CharField('Requisito', max_length=200)
-
-    class Meta:
-        ordering = ['orden', 'id']
-        verbose_name = 'requisito de matriculación'
-        verbose_name_plural = 'requisitos de matriculación'
-
-    def __str__(self):
-        return self.nombre

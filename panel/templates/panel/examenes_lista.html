@@ -34,6 +34,7 @@
                     {% endfor %}
                 </tbody>
             </table>
+            {% include 'panel/_paginacion.html' with pagina=examenes nombre='exámenes' %}
         {% else %}
             <div class="sin-resultados">Todavía no hay exámenes programados.</div>
         {% endif %}

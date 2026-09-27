@@ -14,13 +14,21 @@ from convocatorias.models import Convocatoria, Carrera, CupoCarrera
 from postulantes.models import Inscripcion, Documento, ConfiguracionProceso
 from evaluacion.models import Examen, Resultado
 from .decorators import panel_required
-from .notificaciones import notificar_documento, notificar_decision_inscripcion, notificar_reintegro
+from .paginacion import paginar
+from .notificaciones import notificar_documento, notificar_decision_inscripcion, notificar_reintegro, notificar_comentario
 from .forms import CarreraForm, ConvocatoriaForm, CupoCarreraFormSet, ExamenForm, ConfiguracionProcesoForm
 
 
 def _convocatoria_activa():
     return Convocatoria.objects.filter(activa=True).order_by('fecha_fin').first()
-
+def _convocatoria_seleccionada(request):
+    """Devuelve la convocatoria elegida en el filtro ?proceso=,
+    o la activa si no se eligió ninguna."""
+    proceso_id = request.GET.get('proceso', '')
+    convocatoria = None
+    if proceso_id.isdigit():
+        convocatoria = Convocatoria.objects.filter(pk=proceso_id).first()
+    return convocatoria or _convocatoria_activa()
 
 def _inscripciones_filtradas(request, convocatoria):
     """Aplica a la lista de inscripciones los mismos filtros (q, carrera,
@@ -51,7 +59,7 @@ def _inscripciones_filtradas(request, convocatoria):
 
 @panel_required
 def dashboard(request):
-    convocatoria = _convocatoria_activa()
+    convocatoria = _convocatoria_seleccionada(request)
 
     inscripciones, q, carrera_id, estado = _inscripciones_filtradas(request, convocatoria)
 
@@ -77,8 +85,7 @@ def dashboard(request):
             ).count()
             cupos_disponibles += max(cupo.cupos - aprobados, 0)
 
-    paginator = Paginator(inscripciones, 10)
-    pagina = paginator.get_page(request.GET.get('pagina'))
+    pagina = paginar(request, inscripciones)
 
     carreras = Carrera.objects.filter(cupocarrera__convocatoria=convocatoria).distinct() if convocatoria else Carrera.objects.none()
 
@@ -96,6 +103,8 @@ def dashboard(request):
         'filtro_carrera': carrera_id,
         'filtro_estado': estado,
         'estados': Inscripcion.ESTADO_CHOICES,
+        'convocatorias': Convocatoria.objects.order_by('-fecha_inicio'),
+        'filtro_proceso': str(convocatoria.id) if convocatoria else '',
     })
 
 
@@ -109,7 +118,7 @@ def exportar_postulantes_excel(request):
     from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     from openpyxl.utils import get_column_letter
 
-    convocatoria = _convocatoria_activa()
+    convocatoria = _convocatoria_seleccionada(request)
     inscripciones, q, carrera_id, estado = _inscripciones_filtradas(request, convocatoria)
     inscripciones = list(inscripciones.order_by('postulante__apellidos', 'postulante__nombres'))
     filtro_avance = request.GET.get('avance', '')
@@ -122,7 +131,8 @@ def exportar_postulantes_excel(request):
         ('N°', 6),
         ('Postulante', 30),
         ('Cédula', 16),
-        ('Carrera', 26),
+        ('Contacto', 30),
+        ('Carrera', 34),
         ('N.° de postulación', 20),
         ('Proceso de admisión', 26),
         ('Fecha de inscripción', 18),
@@ -159,7 +169,7 @@ def exportar_postulantes_excel(request):
     subtitulo_partes = ['Listado de postulantes']
     if convocatoria:
         subtitulo_partes.append(convocatoria.nombre)
-    subtitulo_partes.append(f'Generado el {timezone.now().strftime("%d/%m/%Y %H:%M")}')
+    subtitulo_partes.append(f'Generado el {timezone.localtime().strftime("%d/%m/%Y %H:%M")}')
     ws.merge_cells(f'A3:{ultima_letra}3')
     subtitulo = ws['A3']
     subtitulo.value = ' · '.join(subtitulo_partes)
@@ -185,6 +195,8 @@ def exportar_postulantes_excel(request):
             numero,
             inscripcion.postulante.nombre_completo,
             inscripcion.postulante.usuario.cedula or '—',
+            # Teléfono; si no lo registró, el correo
+            inscripcion.postulante.usuario.telefono or inscripcion.postulante.usuario.email or '—',
             inscripcion.carrera.nombre if inscripcion.carrera else 'Sin asignar',
             inscripcion.numero_postulacion,
             inscripcion.convocatoria.nombre,
@@ -197,9 +209,9 @@ def exportar_postulantes_excel(request):
             celda.font = Font(name='Calibri', size=10.5, color=negro)
             celda.border = borde_celda
             celda.alignment = Alignment(
-                horizontal='center' if col != 2 else 'left',
+                horizontal='left' if col in (2, 4, 5) else 'center',
                 vertical='center',
-                wrap_text=(col == 2),
+                wrap_text=(col in (2, 4, 5)),
             )
         fila += 1
 
@@ -210,8 +222,13 @@ def exportar_postulantes_excel(request):
         vacio.alignment = Alignment(horizontal='center', vertical='center')
 
     ws.freeze_panes = f'A{fila_encabezado + 1}'
+    # Al imprimir el Excel: hoja horizontal y todas las columnas en una página de ancho
+    ws.page_setup.orientation = 'landscape'
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
 
-    nombre_archivo = f'postulantes_istam_{timezone.now().strftime("%Y%m%d_%H%M")}.xlsx'
+    nombre_archivo = f'postulantes_istam_{timezone.localtime().strftime("%Y%m%d_%H%M")}.xlsx'
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
@@ -244,12 +261,8 @@ def detalle_postulante(request, inscripcion_id):
 
     resultado = Resultado.objects.filter(inscripcion=inscripcion).select_related('examen').first()
 
-    tipos_actuales = {t for t, _ in Documento.TIPO_CHOICES}
-    docs_anteriores = [d for d in inscripcion.documentos.all() if d.tipo not in tipos_actuales]
-
     return render(request, 'panel/detalle.html', {
         'inscripcion': inscripcion,
-        'docs_anteriores': docs_anteriores,
         'docs_detalle': docs_detalle,
         'docs_validados': docs_validados,
         'total_docs': len(docs_detalle),
@@ -303,23 +316,65 @@ def decidir_inscripcion(request, inscripcion_id):
         return redirect('panel:detalle_postulante', inscripcion_id=inscripcion.id)
 
     accion = request.POST.get('accion')
+    motivo = (request.POST.get('motivo') or '').strip()[:800]
+    volver = redirect('panel:detalle_postulante', inscripcion_id=inscripcion.id)
+    etiquetas = dict(Documento.TIPO_CHOICES)
 
     if accion == 'aprobar':
-        tipos = [t for t, _ in Documento.TIPO_CHOICES]
+        # Validar proceso: solo cuando los 5 documentos están validados
+        tipos = list(etiquetas)
         pendientes = inscripcion.documentos.filter(tipo__in=tipos).exclude(estado='validado').count()
         faltantes = len(tipos) - inscripcion.documentos.filter(tipo__in=tipos).count()
         if pendientes or faltantes:
-            messages.error(request, 'No puedes marcarla como revisada: todavía hay documentos sin validar.')
-            return redirect('panel:detalle_postulante', inscripcion_id=inscripcion.id)
+            messages.error(request, 'No puedes validar el proceso: todavía hay documentos sin validar.')
+            return volver
         inscripcion.estado = 'aprobada'
         inscripcion.save(update_fields=['estado'])
         notificar_decision_inscripcion(inscripcion)
-        messages.success(request, 'Postulación marcada como revisada.')
+        messages.success(request, f'Proceso de {inscripcion.postulante.nombre_completo} validado. Se le avisó por correo.')
+
+    elif accion == 'devolver':
+        # Rechazar proceso pidiendo corrección: los documentos marcados quedan
+        # "rechazados" con el motivo y el postulante puede volver a subirlos.
+        tipos = [t for t in request.POST.getlist('documentos') if t in etiquetas]
+        if not tipos:
+            messages.error(request, 'Marca al menos un documento que el postulante debe volver a subir.')
+            return volver
+        if not motivo:
+            messages.error(request, 'Escribe el motivo para que el postulante sepa qué corregir.')
+            return volver
+        ahora = timezone.now()
+        with transaction.atomic():
+            for doc in inscripcion.documentos.filter(tipo__in=tipos):
+                doc.estado = 'rechazado'
+                doc.observaciones = motivo
+                doc.fecha_revision = ahora
+                doc.revisado_por = request.user
+                doc.save(update_fields=['estado', 'observaciones', 'fecha_revision', 'revisado_por'])
+            nombres = ', '.join(etiquetas[t] for t in tipos)
+            inscripcion.estado = 'docs_pendientes'
+            inscripcion.comentario_revision = f'Debes volver a subir: {nombres}. Motivo: {motivo}'
+            inscripcion.fecha_comentario = ahora
+            inscripcion.save(update_fields=['estado', 'comentario_revision', 'fecha_comentario'])
+        notificar_comentario(inscripcion)
+        messages.warning(
+            request,
+            f'Proceso devuelto a {inscripcion.postulante.nombre_completo}: debe volver a subir {nombres}. '
+            'Se le avisó por correo. Cuando los suba, valídalos y luego pulsa "Validar proceso".'
+        )
+
     elif accion == 'rechazar':
+        # Rechazo definitivo: ya no puede continuar en este proceso
+        if not motivo:
+            messages.error(request, 'Escribe el motivo del rechazo.')
+            return volver
         inscripcion.estado = 'rechazada'
-        inscripcion.save(update_fields=['estado'])
+        inscripcion.comentario_revision = f'Postulación rechazada. Motivo: {motivo}'
+        inscripcion.fecha_comentario = timezone.now()
+        inscripcion.save(update_fields=['estado', 'comentario_revision', 'fecha_comentario'])
         notificar_decision_inscripcion(inscripcion)
-        messages.warning(request, 'Postulación marcada como rechazada.')
+        messages.warning(request, f'Proceso de {inscripcion.postulante.nombre_completo} rechazado definitivamente.')
+
     else:
         messages.error(request, 'Acción no reconocida.')
 
@@ -332,7 +387,7 @@ def decidir_inscripcion(request, inscripcion_id):
 
 @panel_required
 def carreras_lista(request):
-    carreras = Carrera.objects.all().order_by('nombre')
+    carreras = paginar(request, Carrera.objects.all().order_by('nombre'))
     return render(request, 'panel/carreras_lista.html', {'carreras': carreras})
 
 
@@ -425,7 +480,7 @@ def convocatorias_lista(request):
         else:
             conv.etiqueta, conv.etiqueta_clase = 'Proceso actual', 'etiqueta-actual'
 
-    return render(request, 'panel/convocatorias_lista.html', {'convocatorias': convocatorias})
+    return render(request, 'panel/convocatorias_lista.html', {'convocatorias': paginar(request, convocatorias)})
 
 
 @panel_required
@@ -457,7 +512,7 @@ def convocatoria_crear(request):
 
 def _resumen_convocatoria(convocatoria):
     """Postulantes del proceso según su avance, en total y por carrera:
-    completo (subió los 4 documentos) o incompleto (le falta alguno,
+    completo (subió los 5 documentos) o incompleto (le falta alguno,
     debe volver a subir alguno o no ha subido nada)."""
     inscripciones = list(
         Inscripcion.objects.filter(convocatoria=convocatoria).prefetch_related('documentos')
@@ -483,39 +538,53 @@ def _resumen_convocatoria(convocatoria):
     }
 
 
+def _destinos_reintegro(convocatoria):
+    """Procesos a los que se puede reintegrar: todos menos este y que no
+    hayan terminado (actual o nuevo). Primero los activos."""
+    return (
+        Convocatoria.objects.exclude(id=convocatoria.id)
+        .filter(fecha_fin__gte=date.today())
+        .order_by('-activa', 'fecha_inicio')
+    )
+
+
 @panel_required
 def convocatoria_detalle(request, convocatoria_id):
-    """Detalle de un proceso: cuántos ingresaron y cuántos se quedaron, con la
-    lista de los que se quedaron para reintegrarlos al proceso actual o a
-    un proceso nuevo."""
+    """Detalle de un proceso: cuántos lo completaron y cuántos no, con la
+    lista de los que no lo completaron para reintegrarlos a un proceso
+    abierto (actual o nuevo) o eliminarlos de este proceso."""
     convocatoria = get_object_or_404(Convocatoria, id=convocatoria_id)
     resumen = _resumen_convocatoria(convocatoria)
+    hoy = date.today()
+    finalizado = convocatoria.fecha_fin < hoy
 
-    # Procesos a los que se puede reintegrar (todos menos este). Primero los activos.
-    destinos = Convocatoria.objects.exclude(id=convocatoria.id).order_by('-activa', '-fecha_inicio')
-
+    destinos = _destinos_reintegro(convocatoria)
     destino = None
     destino_id = request.GET.get('destino', '')
     if destino_id.isdigit():
         destino = destinos.filter(id=destino_id).first()
     if destino is None:
-        actual = _convocatoria_activa()
-        destino = actual if actual and actual.id != convocatoria.id else destinos.first()
+        destino = destinos.first()
 
     filtro_carrera = request.GET.get('carrera', '')
+    ver = request.GET.get('ver', 'pendientes')
+    if ver not in ('pendientes', 'reintegrados', 'todos'):
+        ver = 'pendientes'
+    if not finalizado:
+        ver = 'todos'   # en un proceso abierto todavía no se reintegra
+
     consulta = (
         Inscripcion.objects.filter(convocatoria=convocatoria)
         .select_related('postulante', 'postulante__usuario', 'carrera')
         .prefetch_related('documentos')
         .order_by('postulante__apellidos', 'postulante__nombres')
     )
-    if filtro_carrera:
+    if filtro_carrera.isdigit():
         consulta = consulta.filter(carrera_id=filtro_carrera)
-    # "Se quedaron" = no completaron el proceso (les falta algún documento)
+    # "No completaron" = les falta algún documento
     quedados = [i for i in consulta if not i.proceso_completo]
 
-    ya_en_destino = set()
-    carreras_destino = set()
+    ya_en_destino, carreras_destino = set(), set()
     if destino:
         ya_en_destino = set(
             Inscripcion.objects.filter(convocatoria=destino).values_list('postulante_id', flat=True)
@@ -526,8 +595,16 @@ def convocatoria_detalle(request, convocatoria_id):
         inscripcion.ya_reintegrado = inscripcion.postulante_id in ya_en_destino
         inscripcion.carrera_en_destino = inscripcion.carrera_id in carreras_destino
 
-    hoy = date.today()
-    if convocatoria.fecha_fin < hoy:
+    total_pendientes = sum(1 for i in quedados if not i.ya_reintegrado)
+    total_reintegrados = len(quedados) - total_pendientes
+    if ver == 'pendientes':
+        lista = [i for i in quedados if not i.ya_reintegrado]
+    elif ver == 'reintegrados':
+        lista = [i for i in quedados if i.ya_reintegrado]
+    else:
+        lista = quedados
+
+    if finalizado:
         estado_proceso = {
             'clase': 'fin',
             'titulo': 'Proceso finalizado',
@@ -556,13 +633,58 @@ def convocatoria_detalle(request, convocatoria_id):
         'resumen': resumen,
         'destinos': destinos,
         'destino': destino,
-        'quedados': quedados,
-        'pendientes_reintegrar': sum(1 for i in quedados if not i.ya_reintegrado),
+        'quedados': paginar(request, lista),
+        'ver': ver,
+        'total_no_completaron': len(quedados),
+        'total_pendientes': total_pendientes,
+        'total_reintegrados': total_reintegrados,
+        'pendientes_reintegrar': total_pendientes,
         'carreras': [f['carrera'] for f in resumen['por_carrera']],
         'filtro_carrera': filtro_carrera,
+        'finalizado': finalizado,
+        'total_cupos': sum(f['cupos'] for f in resumen['por_carrera']),
         'es_proceso_actual': (_convocatoria_activa() or Convocatoria()).id == convocatoria.id,
         'estado_proceso': estado_proceso,
+        'motivos_reintegro': MOTIVOS_REINTEGRO,
     })
+
+
+# Motivos que el personal puede elegir al reintegrar. Se envían por correo
+# al postulante y quedan como "Comentario de admisión" en su nueva postulación.
+MOTIVOS_REINTEGRO = [
+    ('auto', 'Automático (según lo que le faltó)'),
+    ('documentos', 'No completó sus documentos'),
+    ('evaluacion', 'No rindió la evaluación'),
+    ('cupo', 'No alcanzó cupo en la carrera'),
+    ('solicitud', 'Lo solicitó el postulante'),
+    ('otro', 'Otro motivo (escribir mensaje)'),
+]
+
+
+def _concepto_reintegro(motivo, anterior, origen):
+    """Texto del motivo que verá el postulante en el correo."""
+    if motivo == 'documentos':
+        return f'No completaste la entrega de tus documentos en el proceso "{origen.nombre}".'
+    if motivo == 'evaluacion':
+        return f'No rendiste la evaluación de admisión en el proceso "{origen.nombre}".'
+    if motivo == 'cupo':
+        return f'No alcanzaste un cupo en la carrera {anterior.carrera.nombre} en el proceso "{origen.nombre}".'
+    if motivo == 'solicitud':
+        return 'Solicitaste participar nuevamente en el proceso de admisión.'
+    if motivo == 'otro':
+        return ''
+    # Automático: se arma con lo que realmente le faltó en el proceso anterior
+    faltan = anterior.documentos_faltantes
+    if anterior.avance == 'vacio':
+        return f'No subiste ningún documento en el proceso "{origen.nombre}".'
+    partes = []
+    no_subidos = [d['etiqueta'] for d in faltan if d['situacion'] == 'falta']
+    rechazados = [d['etiqueta'] for d in faltan if d['situacion'] == 'rechazado']
+    if no_subidos:
+        partes.append('te faltó subir: ' + ', '.join(no_subidos))
+    if rechazados:
+        partes.append('debías volver a subir: ' + ', '.join(rechazados))
+    return f'En el proceso "{origen.nombre}" ' + '; '.join(partes) + '.'
 
 
 @panel_required
@@ -576,9 +698,9 @@ def reintegrar_postulantes(request, convocatoria_id):
         return redirect('panel:convocatoria_detalle', convocatoria_id=origen.id)
 
     destino_id = request.POST.get('destino', '')
-    destino = Convocatoria.objects.exclude(id=origen.id).filter(id=destino_id).first() if destino_id.isdigit() else None
+    destino = _destinos_reintegro(origen).filter(id=destino_id).first() if destino_id.isdigit() else None
     if destino is None:
-        messages.error(request, 'Elige el proceso al que quieres pasar a los estudiantes.')
+        messages.error(request, 'Elige un proceso abierto (actual o nuevo) al que quieras pasar a los estudiantes.')
         return redirect('panel:convocatoria_detalle', convocatoria_id=origen.id)
 
     ids = [i for i in request.POST.getlist('inscripciones') if i.isdigit()]
@@ -589,11 +711,21 @@ def reintegrar_postulantes(request, convocatoria_id):
     carreras_destino = set(destino.cupocarrera_set.values_list('carrera_id', flat=True))
     ya_en_destino = set(Inscripcion.objects.filter(convocatoria=destino).values_list('postulante_id', flat=True))
 
-    avisar = request.POST.get('avisar') == '1'
+    motivo = request.POST.get('motivo', 'auto')
+    if motivo not in dict(MOTIVOS_REINTEGRO):
+        motivo = 'auto'
+    mensaje = (request.POST.get('mensaje') or '').strip()[:500]
+    volver = f"{reverse('panel:convocatoria_detalle', args=[origen.id])}?destino={destino.id}"
+    if motivo == 'otro' and not mensaje:
+        messages.error(request, 'Elegiste "Otro motivo": escribe el mensaje que recibirá el estudiante.')
+        return redirect(volver)
+    enlace = request.build_absolute_uri(reverse('mis_inscripciones'))
+
     reintegrados, repetidos, sin_carrera = 0, 0, []
+    por_avisar = []   # (nueva inscripción, concepto) — se envían al terminar de guardar
     seleccion = [
         i for i in Inscripcion.objects.filter(id__in=ids, convocatoria=origen)
-        .select_related('postulante', 'carrera')
+        .select_related('postulante', 'postulante__usuario', 'carrera')
         .prefetch_related('documentos')
         if not i.proceso_completo
     ]
@@ -612,13 +744,37 @@ def reintegrar_postulantes(request, convocatoria_id):
                 carrera=anterior.carrera,
             )
             nueva.actualizar_estado_por_documentos()
-            if avisar:
-                notificar_reintegro(nueva, origen)
+            concepto = _concepto_reintegro(motivo, anterior, origen)
+            # Queda visible para el postulante en "Mis inscripciones"
+            nueva.comentario_revision = ' '.join(t for t in [
+                f'Reintegrado desde "{origen.nombre}".', concepto, mensaje
+            ] if t)
+            nueva.fecha_comentario = timezone.now()
+            nueva.save(update_fields=['comentario_revision', 'fecha_comentario'])
+            por_avisar.append((nueva, concepto))
             ya_en_destino.add(anterior.postulante_id)
             reintegrados += 1
 
+    # El correo se envía siempre, automáticamente, a cada reintegrado.
+    avisados, sin_correo = 0, []
+    for nueva, concepto in por_avisar:
+        if notificar_reintegro(nueva, origen, concepto=concepto, mensaje=mensaje, enlace=enlace):
+            avisados += 1
+        else:
+            sin_correo.append(nueva.postulante.nombre_completo)
+
     if reintegrados:
-        messages.success(request, f'{reintegrados} estudiante(s) reintegrado(s) a "{destino.nombre}".')
+        messages.success(
+            request,
+            f'{reintegrados} estudiante(s) reintegrado(s) a "{destino.nombre}". '
+            f'Se envió el aviso por correo a {avisados}.'
+        )
+    if sin_correo:
+        messages.warning(
+            request,
+            f'{len(sin_correo)} estudiante(s) no tienen correo registrado y no recibieron el aviso: '
+            f'{", ".join(sin_correo)}. Verán el motivo al ingresar a "Mis inscripciones".'
+        )
     if repetidos:
         messages.info(request, f'{repetidos} estudiante(s) ya estaban inscritos en "{destino.nombre}" y no se duplicaron.')
     if sin_carrera:
@@ -627,7 +783,7 @@ def reintegrar_postulantes(request, convocatoria_id):
             f'No se pudo reintegrar a {len(sin_carrera)} estudiante(s) porque su carrera no tiene cupos en '
             f'"{destino.nombre}": {", ".join(sin_carrera)}. Agrega esa carrera al proceso y vuelve a intentarlo.'
         )
-    return redirect(f"{reverse('panel:convocatoria_detalle', args=[origen.id])}?destino={destino.id}")
+    return redirect(volver)
 
 
 @panel_required
@@ -739,7 +895,7 @@ def convocatorias_eliminar(request):
 
 @panel_required
 def examenes_lista(request):
-    examenes = Examen.objects.all().order_by('-fecha', '-hora')
+    examenes = paginar(request, Examen.objects.all().order_by('-fecha', '-hora'))
     return render(request, 'panel/examenes_lista.html', {'examenes': examenes})
 
 
@@ -774,6 +930,99 @@ def examen_editar(request, examen_id):
 # Reportes (solo lectura, no pasa por /admin/)
 # ============================================================
 
+def _historial_excel(historial, proceso_elegido, carrera_elegida):
+    """Excel del historial de postulantes de Reportes, con los mismos
+    filtros (proceso y carrera) que se ven en pantalla."""
+    import openpyxl
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+    from openpyxl.utils import get_column_letter
+
+    columnas = [
+        ('N°', 6),
+        ('Postulante', 32),
+        ('Cédula', 15),
+        ('Contacto', 30),
+        ('Carrera', 32),
+        ('Proceso de admisión', 30),
+        ('N.° de postulación', 20),
+        ('Fecha', 13),
+        ('Estado', 22),
+    ]
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Historial'
+
+    verde_fuerte = 'FF8BC34A'
+    verde_claro = 'FFE8F5E9'
+    borde_fino = Side(style='thin', color='FFBDBDBD')
+    borde = Border(left=borde_fino, right=borde_fino, top=borde_fino, bottom=borde_fino)
+    ultima = get_column_letter(len(columnas))
+
+    ws.merge_cells(f'A1:{ultima}2')
+    ws['A1'].value = 'INSTITUTO SUPERIOR TECNOLÓGICO AMAZÓNICO'
+    ws['A1'].font = Font(name='Calibri', size=14, bold=True, color='FFFFFFFF')
+    ws['A1'].alignment = Alignment(horizontal='center', vertical='center')
+    for fila_t in (1, 2):
+        for col in range(1, len(columnas) + 1):
+            ws.cell(row=fila_t, column=col).fill = PatternFill('solid', fgColor=verde_fuerte)
+
+    subtitulo = ' · '.join([
+        'Historial de postulantes',
+        f'Proceso: {proceso_elegido.nombre if proceso_elegido else "Todos los procesos"}',
+        f'Carrera: {carrera_elegida.nombre if carrera_elegida else "Todas"}',
+        f'Generado el {timezone.localtime().strftime("%d/%m/%Y %H:%M")}',
+    ])
+    ws.merge_cells(f'A3:{ultima}3')
+    ws['A3'].value = subtitulo
+    ws['A3'].font = Font(name='Calibri', size=10, italic=True, color='FF33691E')
+    ws['A3'].alignment = Alignment(horizontal='center', vertical='center')
+
+    for col, (etiqueta, ancho) in enumerate(columnas, start=1):
+        celda = ws.cell(row=4, column=col, value=etiqueta)
+        celda.font = Font(name='Calibri', size=11, bold=True)
+        celda.fill = PatternFill('solid', fgColor=verde_claro)
+        celda.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        celda.border = borde
+        ws.column_dimensions[get_column_letter(col)].width = ancho
+    ws.row_dimensions[4].height = 26
+
+    fila = 5
+    for numero, ins in enumerate(historial, start=1):
+        usuario = ins.postulante.usuario
+        contacto = usuario.telefono or usuario.email or '—'
+        valores = [
+            numero,
+            f'{ins.postulante.apellidos} {ins.postulante.nombres}'.strip(),
+            usuario.cedula or '—',
+            contacto,
+            ins.carrera.nombre if ins.carrera else 'Sin asignar',
+            ins.convocatoria.nombre,
+            ins.numero_postulacion,
+            ins.fecha_inscripcion.strftime('%d/%m/%Y'),
+            ins.get_estado_display(),
+        ]
+        for col, valor in enumerate(valores, start=1):
+            celda = ws.cell(row=fila, column=col, value=valor)
+            celda.font = Font(name='Calibri', size=10.5)
+            celda.border = borde
+            celda.alignment = Alignment(horizontal='left' if col in (2, 4, 5, 6) else 'center', vertical='center', wrap_text=True)
+        fila += 1
+
+    ws.cell(row=fila + 1, column=1, value=f'Total: {fila - 5} postulantes').font = Font(name='Calibri', size=10, bold=True)
+    ws.freeze_panes = 'A5'
+    # Al imprimir el Excel: hoja horizontal y todas las columnas en una página de ancho
+    ws.page_setup.orientation = 'landscape'
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+
+    respuesta = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    nombre = f'historial_postulantes_{timezone.localtime().strftime("%Y%m%d_%H%M")}.xlsx'
+    respuesta['Content-Disposition'] = f'attachment; filename="{nombre}"'
+    wb.save(respuesta)
+    return respuesta
+
+
 @panel_required
 def reportes(request):
     convocatoria = _convocatoria_activa()
@@ -796,12 +1045,41 @@ def reportes(request):
     for fila in documentos_por_estado:
         fila['etiqueta'] = docs_estados_dict.get(fila['estado'], fila['estado'])
 
+    # Historial de postulantes para imprimir: de todos los procesos
+    # (anteriores y actual) o de uno en particular, y opcionalmente por carrera.
+    historial_proceso = request.GET.get('historial_proceso', '')
+    historial_carrera = request.GET.get('historial_carrera', '')
+    historial = Inscripcion.objects.select_related(
+        'postulante', 'postulante__usuario', 'carrera', 'convocatoria'
+    ).order_by('-convocatoria__fecha_inicio', 'carrera__nombre', 'postulante__apellidos', 'postulante__nombres')
+    proceso_elegido = None
+    carrera_elegida = None
+    if historial_proceso.isdigit():
+        historial = historial.filter(convocatoria_id=historial_proceso)
+        proceso_elegido = Convocatoria.objects.filter(pk=historial_proceso).first()
+    if historial_carrera.isdigit():
+        historial = historial.filter(carrera_id=historial_carrera)
+        carrera_elegida = Carrera.objects.filter(pk=historial_carrera).first()
+
+    # Botón "Exportar a Excel": misma página, con ?exportar=excel
+    if request.GET.get('exportar') == 'excel':
+        return _historial_excel(historial, proceso_elegido, carrera_elegida)
+
     return render(request, 'panel/reportes.html', {
         'convocatoria': convocatoria,
         'por_estado': por_estado,
         'por_carrera': por_carrera,
         'documentos_por_estado': documentos_por_estado,
         'total_inscripciones': Inscripcion.objects.count(),
+        'historial': historial,
+        'historial_pagina': paginar(request, historial),
+        'historial_convocatorias': Convocatoria.objects.order_by('-fecha_inicio'),
+        'historial_carreras': Carrera.objects.order_by('nombre'),
+        'historial_proceso': historial_proceso,
+        'historial_carrera': historial_carrera,
+        'proceso_elegido': proceso_elegido,
+        'carrera_elegida': carrera_elegida,
+        'fecha_impresion': timezone.localtime(),
     })
 
 

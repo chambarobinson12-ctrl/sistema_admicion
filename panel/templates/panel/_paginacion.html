@@ -1,0 +1,29 @@
+{# Paginación con números. Uso: {% include 'panel/_paginacion.html' with pagina=pagina nombre='estudiantes' %} #}
+{% if pagina.paginator.count %}
+<div class="paginacion-numeros">
+    <span class="paginacion-info">Mostrando <b>{{ pagina.start_index }}–{{ pagina.end_index }}</b> de <b>{{ pagina.paginator.count }}</b> {{ nombre|default:"registros" }}</span>
+    {% if pagina.has_other_pages %}
+    <nav class="paginacion-botones" aria-label="Páginas">
+        {% if pagina.has_previous %}
+            <a href="?{% if pagina.qs %}{{ pagina.qs }}&{% endif %}{{ pagina.parametro }}={{ pagina.previous_page_number }}" class="pag-btn pag-flecha" title="Anterior">‹ Anterior</a>
+        {% else %}
+            <span class="pag-btn pag-flecha deshabilitado">‹ Anterior</span>
+        {% endif %}
+        {% for n in pagina.rango %}
+            {% if n == pagina.puntos %}
+                <span class="pag-puntos">…</span>
+            {% elif n == pagina.number %}
+                <span class="pag-btn actual" aria-current="page">{{ n }}</span>
+            {% else %}
+                <a href="?{% if pagina.qs %}{{ pagina.qs }}&{% endif %}{{ pagina.parametro }}={{ n }}" class="pag-btn">{{ n }}</a>
+            {% endif %}
+        {% endfor %}
+        {% if pagina.has_next %}
+            <a href="?{% if pagina.qs %}{{ pagina.qs }}&{% endif %}{{ pagina.parametro }}={{ pagina.next_page_number }}" class="pag-btn pag-flecha" title="Siguiente">Siguiente ›</a>
+        {% else %}
+            <span class="pag-btn pag-flecha deshabilitado">Siguiente ›</span>
+        {% endif %}
+    </nav>
+    {% endif %}
+</div>
+{% endif %}

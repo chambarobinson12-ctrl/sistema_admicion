@@ -112,7 +112,9 @@
                         <a href="{{ info.malla_url }}" download class="btn-malla btn-malla-modal">📥 Descargar malla curricular</a>
                     {% endif %}
 
-                    {% if user.is_authenticated %}
+                    {% if user.is_superuser or user.is_staff or user.rol == 'admin_admision' %}
+                        <p class="campo-ayuda" style="margin-top:16px;">👁 Vista de administrador: aquí el postulante ve el botón para postularse a esta carrera.</p>
+                    {% elif user.is_authenticated %}
                         {% if info.carrera_id %}
                             <form method="post" action="{% url 'iniciar_postulacion' %}">
                                 {% csrf_token %}

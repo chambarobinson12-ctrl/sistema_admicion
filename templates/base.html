@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/estilos.css' %}">
+    {% block extra_css %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}"></body>
         {% block nav %}
@@ -24,14 +25,13 @@
                <div class="nav-links">
             <a href="{% url 'inicio' %}" class="{% if request.resolver_match.url_name == 'inicio' %}active{% endif %}">Inicio</a>
 
-            {% if user.is_authenticated and user.is_staff or user.is_superuser or user.rol == 'admin_admision' %}
-                <a href="/panel/">Panel administrativo</a>
-            {% else %}
-                <a href="{% url 'lista_carreras' %}" class="{% if request.resolver_match.url_name == 'lista_carreras' %}active{% endif %}">Procesos</a>
-                {% if user.is_authenticated %}
-                    <a href="{% url 'mis_inscripciones' %}" class="{% if request.resolver_match.url_name == 'mis_inscripciones' or request.resolver_match.url_name == 'postular' %}active{% endif %}">Mi Proceso</a>
-                {% endif %}
+            <a href="{% url 'lista_carreras' %}" class="{% if request.resolver_match.url_name == 'lista_carreras' %}active{% endif %}">Procesos</a>
+            {% if user.is_superuser or user.is_staff or user.rol == 'admin_admision' %}
+                <a href="/panel/" class="nav-cta">Panel administrativo</a>
+            {% elif user.is_authenticated %}
+                <a href="{% url 'mis_inscripciones' %}" class="{% if request.resolver_match.url_name == 'mis_inscripciones' or request.resolver_match.url_name == 'postular' %}active{% endif %}">Mi Proceso</a>
             {% endif %}
+            <a href="{% url 'tutorial_matriculacion' %}" class="{% if request.resolver_match.url_name == 'tutorial_matriculacion' %}active{% endif %}">🎥 Tutorial de matriculación</a>
         </div>
 
         <div class="nav-right">
@@ -197,8 +197,8 @@
         }
 
         const RESPUESTAS = {
-            documentos: 'Para completar tu postulación necesitas subir 4 documentos en "Mis documentos": cédula de identidad, certificado de votación, acta de grado o título de bachiller, y una foto tamaño carnet. Puedes subirlos o reemplazarlos las veces que necesites hasta que sean validados.',
-            estado: 'Entra a "Mis documentos" con tu usuario. Ahí verás tu número de postulación y el estado de cada documento (no cargado, pendiente de revisión, validado o rechazado), además del paso en que va tu proceso: Inscripción → Documentos → Evaluación → Aceptación.',
+            documentos: 'Tu proceso tiene 5 pasos y en cada uno subes un documento desde "Mi proceso": 1) Registro: certificado de registro, 2) Inscripción: certificado de inscripción, 3) Evaluación: nota obtenida, 4) Postulación: registro de postulación a la carrera y 5) Aceptación: certificado de aceptación del cupo. Puedes reemplazarlos las veces que necesites hasta que sean validados.',
+            estado: 'Entra a "Mi proceso" con tu usuario. Ahí verás tu número de postulación, el paso en que vas (Registro → Inscripción → Evaluación → Postulación → Aceptación) y el estado de cada documento: sin subir, pendiente de revisión, validado o rechazado.',
             senecyt: 'SENECYT es la Secretaría de Educación Superior, Ciencia, Tecnología e Innovación del Ecuador. Define las etapas oficiales de acceso a la educación superior: Registro, Inscripción, Evaluación, Postulación, Aceptación y Matriculación. Este sistema usa ese mismo lenguaje para que sepas siempre en qué etapa estás.',
             humano: 'Claro, puedes escribirnos directo por WhatsApp al +593 99 477 8820 o llamar al +593 7-230-0262, en horario de atención de lunes a viernes de 13h30 a 21h30. También puedes revisar la pestaña "Ubicación y contacto" de este chat.',
         };

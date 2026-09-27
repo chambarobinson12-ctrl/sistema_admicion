@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/estilos.css' %}">
 </head>
-<body>
+<body class="{% if not request.user.is_superuser and not request.user.is_staff %}modo-solo-lectura{% endif %}">
 <div class="panel-layout">
     <aside class="panel-sidebar">
         <a href="/panel/" class="brand-link">
@@ -27,6 +27,7 @@
         <a href="{% url 'panel:revisar_documentos' %}" class="panel-nav-item {% if request.resolver_match.url_name == 'revisar_documentos' %}activo{% endif %}">Revisión de documentos</a>
         <a href="{% url 'panel:convocatorias_lista' %}" class="panel-nav-item {% if request.resolver_match.url_name in 'convocatorias_lista,convocatoria_crear,convocatoria_editar,convocatoria_detalle' %}activo{% endif %}">Procesos de admisión</a>
         <a href="{% url 'panel:carreras_lista' %}" class="panel-nav-item {% if request.resolver_match.url_name in 'carreras_lista,carrera_crear,carrera_editar' %}activo{% endif %}">Carreras</a>
+        <a href="{% url 'tutorial_matriculacion' %}" class="panel-nav-item">Tutorial de matriculación</a>
 
         <a href="{% url 'panel:reportes' %}" class="panel-nav-item {% if request.resolver_match.url_name == 'reportes' %}activo{% endif %}">Reportes</a>
         <a href="{% url 'panel:configuracion' %}" class="panel-nav-item {% if request.resolver_match.url_name in 'configuracion,estados_postulantes' %}activo{% endif %}">Configuración</a>
@@ -36,7 +37,7 @@
             <div class="avatar-circulo">{{ request.user.username|slice:":2"|upper }}</div>
             <div class="panel-usuario-info">
                 <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
-                <span>{% if request.user.is_superuser %}Administrador principal{% elif request.user.rol == 'admin_admision' %}Personal de admisión{% else %}Administrador{% endif %}</span>
+                <span>{% if request.user.is_superuser %}Administrador principal{% elif request.user.is_staff %}Administrador principal{% elif request.user.rol == 'admin_admision' %}Administrador secundario · solo lectura{% else %}Administrador{% endif %}</span>
             </div>
             <form method="post" action="{% url 'logout' %}" class="logout-form">
                 {% csrf_token %}
@@ -54,10 +55,58 @@
                 </div>
             {% endfor %}
         {% endif %}
+        {% if not request.user.is_superuser and not request.user.is_staff %}
+            <div class="aviso-solo-lectura">👁 Estás en <strong>modo solo lectura</strong>: puedes revisar procesos, carreras, postulantes, documentos y reportes, pero no hacer cambios.</div>
+        {% endif %}
         {% block panel_content %}{% endblock %}
     </main>
 </div>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="{% static 'js/avisos.js' %}"></script>
+{% if not request.user.is_superuser and not request.user.is_staff %}
+    {# Administrador secundario: se ocultan los botones que hacen cambios. #}
+    {# (La protección real está en panel/decorators.py; esto es solo visual.) #}
+    <style>
+        .aviso-solo-lectura { background:#fff8e1; border:1px solid #f3d27a; color:#6b4e00; border-radius:12px; padding:10px 16px; font-size:14px; }
+        .modo-solo-lectura .panel-main a[href*="/nuevo/"],
+        .modo-solo-lectura .panel-main a[href*="/nueva/"],
+        .modo-solo-lectura .panel-main a[href*="#malla"],
+        .modo-solo-lectura .panel-main .btn-nuevo-proceso,
+        .modo-solo-lectura .panel-main [data-pasos-abrir="intro"] { display:none !important; }
+    </style>
+    <script>
+        (function () {
+            var main = document.querySelector('.panel-main');
+            if (!main) { return; }
+            // Todo control que pertenezca a un formulario que guarda cambios (POST):
+            // los botones se ocultan y los campos quedan bloqueados.
+            main.querySelectorAll('button, input, select, textarea').forEach(function (el) {
+                var form = el.form;
+                if (!form || (form.getAttribute('method') || '').toLowerCase() !== 'post') { return; }
+                if (el.type === 'button') { return; }  // botones como "Cerrar" siguen funcionando
+                if (el.tagName === 'BUTTON' || el.type === 'submit') {
+                    el.style.display = 'none';
+                } else if (el.type !== 'hidden') {
+                    el.disabled = true;
+                }
+            });
+            main.querySelectorAll('form').forEach(function (form) {
+                if ((form.getAttribute('method') || '').toLowerCase() === 'post') {
+                    form.addEventListener('submit', function (e) { e.preventDefault(); });
+                }
+            });
+            // En las páginas de ver, "Cancelar" pasa a decir "Volver".
+            main.querySelectorAll('a').forEach(function (el) {
+                if (el.children.length === 0 && el.textContent.trim() === 'Cancelar') { el.textContent = 'Volver'; }
+            });
+            // "Editar" pasa a decir "Ver", porque solo puede mirar.
+            main.querySelectorAll('a[href*="/editar/"], h1, h2, .tarjeta-titulo, span').forEach(function (el) {
+                if (el.children.length === 0 && /^\s*Editar\b/.test(el.textContent)) {
+                    el.textContent = el.textContent.replace('Editar', 'Ver');
+                }
+            });
+        })();
+    </script>
+{% endif %}
 </body>
 </html>

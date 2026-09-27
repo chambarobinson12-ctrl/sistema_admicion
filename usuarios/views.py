@@ -24,9 +24,10 @@ class IngresoView(LoginView):
 
     def get_success_url(self):
         usuario = self.request.user
-        if usuario.is_superuser or usuario.is_staff or usuario.rol == 'admin_admision':
-            return '/'
-        return '/'
+        # Todos (postulantes y administradores) llegan a la portada del sitio.
+        # El administrador ve el sitio público solo para mirar y, desde el menú,
+        # entra al "Panel administrativo".
+        return self.get_redirect_url() or '/'
 
 
 def inicio(request):

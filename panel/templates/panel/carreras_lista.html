@@ -68,6 +68,7 @@
                     {% endfor %}
                 </tbody>
             </table>
+            {% include 'panel/_paginacion.html' with pagina=carreras nombre='carreras' %}
         {% else %}
             <div class="sin-resultados">Todavía no hay carreras registradas.</div>
         {% endif %}

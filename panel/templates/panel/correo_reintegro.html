@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es">
+<body style="margin:0; padding:0; background:#F1F8E9; font-family:Arial, Helvetica, sans-serif; color:#232B1E;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F1F8E9; padding:24px 12px;">
+<tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px; background:#ffffff; border-radius:14px; overflow:hidden; border:1px solid #DCEDC8;">
+    <tr><td style="background:#558B2F; padding:22px 28px; color:#ffffff;">
+        <div style="font-size:12px; letter-spacing:.08em; text-transform:uppercase; opacity:.85;">ISTAM · Admisiones</div>
+        <div style="font-size:21px; font-weight:bold; margin-top:4px;">Fuiste reintegrado a un nuevo proceso</div>
+    </td></tr>
+    <tr><td style="padding:26px 28px 8px;">
+        <p style="margin:0 0 14px; font-size:15px;">Hola <strong>{{ nombre }}</strong>,</p>
+        <p style="margin:0 0 18px; font-size:15px; line-height:1.5;">
+            Te informamos que fuiste inscrito nuevamente en el proceso de admisión
+            <strong>{{ proceso.nombre }}</strong>. Tienes una nueva oportunidad para completar tu postulación.
+        </p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7FAF3; border:1px solid #E1E9D8; border-radius:10px; font-size:14px;">
+            <tr><td style="padding:10px 14px; color:#5C6B52; width:45%;">Carrera</td><td style="padding:10px 14px; font-weight:bold;">{{ inscripcion.carrera.nombre }}</td></tr>
+            <tr><td style="padding:10px 14px; color:#5C6B52; border-top:1px solid #E1E9D8;">Nuevo N.° de postulación</td><td style="padding:10px 14px; font-weight:bold; border-top:1px solid #E1E9D8;">{{ inscripcion.numero_postulacion }}</td></tr>
+            <tr><td style="padding:10px 14px; color:#5C6B52; border-top:1px solid #E1E9D8;">Proceso anterior</td><td style="padding:10px 14px; border-top:1px solid #E1E9D8;">{{ proceso_anterior.nombre }}</td></tr>
+            <tr><td style="padding:10px 14px; color:#5C6B52; border-top:1px solid #E1E9D8;">Plazo para completar</td><td style="padding:10px 14px; font-weight:bold; color:#93630F; border-top:1px solid #E1E9D8;">Hasta el {{ proceso.fecha_fin|date:"d/m/Y" }}</td></tr>
+        </table>
+        {% if concepto %}
+        <div style="margin-top:18px; padding:12px 14px; background:#FCF2DE; border-left:4px solid #C98A1F; border-radius:6px; font-size:14px; line-height:1.5;">
+            <strong style="display:block; margin-bottom:3px;">Motivo del reintegro</strong>{{ concepto }}
+        </div>
+        {% endif %}
+        {% if mensaje %}
+        <div style="margin-top:12px; padding:12px 14px; background:#F1F8E9; border-left:4px solid #558B2F; border-radius:6px; font-size:14px; line-height:1.5;">
+            <strong style="display:block; margin-bottom:3px;">Mensaje del equipo de admisión</strong>“{{ mensaje|linebreaksbr }}”
+        </div>
+        {% endif %}
+        <p style="margin:22px 0 8px; font-size:15px; font-weight:bold;">¿Qué debes hacer ahora?</p>
+        <ol style="margin:0 0 20px; padding-left:20px; font-size:14px; line-height:1.7;">
+            <li>Ingresa al sistema de admisión con tu usuario y contraseña.</li>
+            <li>Entra a <strong>Mis inscripciones</strong> y abre tu nueva postulación.</li>
+            <li>Sube tus documentos desde el paso 1, antes del <strong>{{ proceso.fecha_fin|date:"d/m/Y" }}</strong>.</li>
+        </ol>
+        {% if enlace %}
+        <p style="text-align:center; margin:0 0 22px;">
+            <a href="{{ enlace }}" style="display:inline-block; background:#558B2F; color:#ffffff; text-decoration:none; font-weight:bold; padding:12px 26px; border-radius:9px; font-size:15px;">Ir a mis inscripciones</a>
+        </p>
+        {% endif %}
+        <p style="margin:0 0 20px; font-size:13px; color:#5C6B52; line-height:1.5;">
+            Tu postulación anterior se conserva como historial. No necesitas crear una cuenta nueva.
+        </p>
+    </td></tr>
+    <tr><td style="background:#F7FAF3; padding:14px 28px; font-size:12px; color:#7C8A72; border-top:1px solid #E1E9D8;">
+        Departamento de Admisión · Instituto Superior Tecnológico Amazónico (ISTAM)<br>
+        Este es un correo automático, por favor no respondas a este mensaje.
+    </td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>

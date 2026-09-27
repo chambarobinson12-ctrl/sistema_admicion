@@ -1,0 +1,62 @@
+/* ============================================================
+   Tutorial de matriculación (postulantes/tutorial-matriculacion/)
+   ============================================================ */
+.tuto { max-width: 1180px; margin: 0 auto; }
+.tuto [hidden] { display: none !important; }
+.tuto-hero > div:first-child { flex: 1 1 420px; }
+.tuto-hero {
+    background: linear-gradient(120deg, var(--primario-oscuro), var(--acento-fuerte));
+    color: #fff; border-radius: 20px; padding: 30px 36px; margin-bottom: 24px;
+    display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap;
+}
+.tuto-hero h1 { color: #fff; font-size: 30px; margin: 0; }
+.tuto-hero p { margin: 8px 0 0; opacity: .92; max-width: 600px; line-height: 1.5; }
+.tuto-tag { display: inline-block; background: rgba(255,255,255,.18); padding: 5px 13px; border-radius: 20px; font-weight: 700; font-size: 12.5px; margin-bottom: 10px; }
+.tuto-pasos { display: flex; gap: 10px; flex-wrap: wrap; }
+.tuto-pasos div { background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.3); border-radius: 12px; padding: 12px 16px; text-align: center; font-size: 13px; min-width: 110px; }
+.tuto-pasos b { display: block; font-size: 20px; }
+
+.tuto-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
+.tuto-grid-postulante { grid-template-columns: 1.4fr 1fr; }
+.tuto-card { background: var(--superficie); border: 1px solid var(--borde); border-radius: 16px; padding: 24px; }
+.tuto-card h2 { font-size: 19px; color: var(--primario-texto); display: flex; align-items: center; gap: 10px; margin: 0 0 4px; }
+.tuto-ico { width: 34px; height: 34px; border-radius: 10px; background: var(--acento-suave); display: inline-flex; align-items: center; justify-content: center; font-size: 17px; }
+.tuto-hint { color: var(--texto-muted); font-size: 14px; margin: 0 0 14px; }
+.tuto-card label { display: block; font-weight: 700; font-size: 14px; margin: 12px 0 6px; }
+.tuto-card input[type="url"], .tuto-req input { width: 100%; border: 1.5px solid var(--borde); border-radius: 10px; padding: 11px 13px; font: inherit; font-size: 15px; box-sizing: border-box; }
+
+.tuto-video { position: relative; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; background: linear-gradient(135deg, var(--primario-oscuro), var(--acento-fuerte)); }
+.tuto-video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.tuto-video-vacio { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 14px; align-items: center; justify-content: center; color: #fff; font-weight: 700; text-decoration: none; }
+.tuto-play { width: 76px; height: 54px; background: #e62117; border-radius: 14px; display: flex; align-items: center; justify-content: center; }
+.tuto-play::after { content: ""; border-left: 22px solid #fff; border-top: 13px solid transparent; border-bottom: 13px solid transparent; margin-left: 5px; }
+.tuto-play-gris { background: rgba(255,255,255,.3); }
+.tuto-video-titulo { font-size: 19px; color: var(--primario-texto); margin: 14px 0 4px; }
+
+.tuto-req { display: flex; align-items: center; gap: 10px; border: 1.5px solid var(--borde); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; background: var(--fondo); min-height: 56px; }
+.tuto-req.editando { border-color: var(--primario); background: var(--acento-suave); }
+.tuto-req-nombre { flex: 1; font-weight: 600; }
+.tuto-req input { flex: 1; padding: 8px 11px; }
+.tuto-num { width: 28px; height: 28px; flex: none; border-radius: 8px; background: var(--primario); color: #fff; font-weight: 800; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; }
+.tuto-num-suave { background: var(--acento-suave-2); color: var(--primario-texto); }
+.tuto-btn-editar, .tuto-btn-cancelar { border: 1px solid var(--borde); background: #fff; color: var(--primario-texto); border-radius: 8px; padding: 7px 12px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.tuto-btn-cancelar { color: var(--texto-muted); }
+.tuto-btn-editar, .tuto-btn-cancelar, .tuto-guardar { margin: 0; box-shadow: none; transform: none; }
+.tuto-btn-editar:hover { background: var(--acento-suave); color: var(--primario-texto); transform: none; box-shadow: none; }
+.tuto-btn-cancelar:hover { background: var(--fondo); color: var(--texto); transform: none; box-shadow: none; }
+.tuto-aviso-admin { background: var(--acento-suave); border: 1px solid var(--acento-suave-2); color: var(--primario-texto); border-radius: 12px; padding: 12px 14px; font-size: 14px; margin-top: 14px; line-height: 1.5; }
+.tuto-pie { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; color: var(--texto-muted); font-size: 14px; }
+.tuto-guardar { background: var(--primario); color: #fff; border: 0; border-radius: 12px; padding: 13px 24px; font: inherit; font-weight: 800; cursor: pointer; }
+.tuto-guardar:hover { background: var(--primario-oscuro); }
+
+.tuto-lista { list-style: none; padding: 0; margin: 0; }
+.tuto-lista li { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--borde-suave); font-weight: 700; }
+.tuto-lista li:last-child { border-bottom: 0; }
+.tuto-secretaria { display: flex; gap: 12px; align-items: flex-start; background: var(--alerta-suave); border: 1px solid #f1dfa6; color: var(--alerta-texto); border-radius: 14px; padding: 14px 16px; margin-top: 16px; line-height: 1.5; }
+.tuto-secretaria-ico { font-size: 26px; }
+
+@media (max-width: 860px) {
+    .tuto-grid, .tuto-grid-postulante { grid-template-columns: 1fr; }
+    .tuto-hero { padding: 24px; }
+    .tuto-hero h1 { font-size: 24px; }
+}

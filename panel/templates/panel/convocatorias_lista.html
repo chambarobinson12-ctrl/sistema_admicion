@@ -86,6 +86,7 @@
                     {% endfor %}
                 </tbody>
             </table>
+            {% include 'panel/_paginacion.html' with pagina=convocatorias nombre='procesos' %}
         {% else %}
             <div class="sin-resultados">Todavía no hay procesos de admisión registrados.</div>
         {% endif %}

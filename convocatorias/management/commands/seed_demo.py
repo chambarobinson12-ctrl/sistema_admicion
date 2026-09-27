@@ -182,7 +182,7 @@ class Command(BaseCommand):
                         inscripcion=inscripcion, tipo=tipo,
                         archivo=archivo_falso(f"{tipo}.pdf"),
                         estado="rechazado" if i == 0 else "validado",
-                        observaciones="Foto ilegible, sube una versión más clara." if i == 0 else "",
+                        observaciones="El certificado está ilegible, sube una versión más clara." if i == 0 else "",
                     )
 
             inscripcion.estado = datos["estado_final"]

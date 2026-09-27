@@ -7,7 +7,8 @@ igual dentro del sistema.
 """
 
 from django.conf import settings
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives, send_mail
+from django.template.loader import render_to_string
 
 
 def _enviar(asunto, mensaje, destinatario):
@@ -32,7 +33,7 @@ def notificar_documento(documento):
             f'Hola {nombre},\n\n'
             f'Tu documento "{documento.get_tipo_display()}" de la postulación '
             f'{documento.inscripcion.numero_postulacion} fue revisado y quedó validado.\n\n'
-            'Puedes ver el detalle en "Mis documentos".'
+            'Puedes ver el detalle en "Mi proceso".'
         )
     elif documento.estado == 'rechazado':
         asunto = f'Debes volver a subir: {documento.get_tipo_display()}'
@@ -41,7 +42,7 @@ def notificar_documento(documento):
             f'Tu documento "{documento.get_tipo_display()}" de la postulación '
             f'{documento.inscripcion.numero_postulacion} fue rechazado.\n'
             f'Motivo: {documento.observaciones or "No especificado"}\n\n'
-            'Ingresa a "Mis documentos" para volver a subirlo.'
+            'Ingresa a "Mi proceso" para volver a subirlo.'
         )
     else:
         return
@@ -67,6 +68,7 @@ def notificar_decision_inscripcion(inscripcion):
             f'Hola {nombre},\n\n'
             f'Tu postulación {inscripcion.numero_postulacion} a la carrera '
             f'{inscripcion.carrera.nombre} no fue aprobada.\n\n'
+            f'{inscripcion.comentario_revision}\n\n'
             'Si tienes dudas sobre este resultado, contáctanos usando el chat de ayuda del sitio (ícono 💬).'
         )
     else:
@@ -75,19 +77,31 @@ def notificar_decision_inscripcion(inscripcion):
     _enviar(asunto, mensaje, usuario.email)
 
 
-def notificar_reintegro(inscripcion, proceso_anterior):
+def notificar_reintegro(inscripcion, proceso_anterior, concepto='', mensaje='', enlace=''):
+    """Correo al postulante cuando el personal lo reintegra a un proceso nuevo.
+    Lleva el motivo (concepto), un mensaje opcional del personal y los pasos a
+    seguir. Devuelve False si el postulante no tiene correo registrado."""
     usuario = inscripcion.postulante.usuario
-    nombre = usuario.first_name or usuario.username
-    asunto = f'Fuiste reintegrado al proceso {inscripcion.convocatoria.nombre} - ISTAM'
-    mensaje = (
-        f'Hola {nombre},\n\n'
-        f'Te informamos que fuiste inscrito nuevamente en el proceso de admisión '
-        f'"{inscripcion.convocatoria.nombre}" para la carrera {inscripcion.carrera.nombre} '
-        f'(antes participaste en "{proceso_anterior.nombre}").\n\n'
-        f'Tu nuevo número de postulación es {inscripcion.numero_postulacion}.\n'
-        'Ingresa a "Mis documentos" para revisar qué documentos debes completar.'
-    )
-    _enviar(asunto, mensaje, usuario.email)
+    if not usuario.email:
+        return False
+    nombre = inscripcion.postulante.nombres or usuario.first_name or usuario.username
+    proceso = inscripcion.convocatoria
+    asunto = f'Fuiste reintegrado al proceso de admisión {proceso.nombre} - ISTAM'
+    contexto = {
+        'nombre': nombre,
+        'inscripcion': inscripcion,
+        'proceso': proceso,
+        'proceso_anterior': proceso_anterior,
+        'concepto': concepto,
+        'mensaje': mensaje,
+        'enlace': enlace,
+    }
+    texto = render_to_string('panel/correo_reintegro.txt', contexto)
+    html = render_to_string('panel/correo_reintegro.html', contexto)
+    correo = EmailMultiAlternatives(asunto, texto, settings.DEFAULT_FROM_EMAIL, [usuario.email])
+    correo.attach_alternative(html, 'text/html')
+    correo.send(fail_silently=True)
+    return True
 
 
 def notificar_comentario(inscripcion):
@@ -99,6 +113,6 @@ def notificar_comentario(inscripcion):
         f'El personal de admisión revisó tu postulación a {inscripcion.carrera.nombre} '
         f'y te dejó este comentario:\n\n'
         f'"{inscripcion.comentario_revision}"\n\n'
-        'Ingresa a "Mis documentos" para completar lo que falta.'
+        'Ingresa a "Mi proceso" para completar lo que falta.'
     )
     _enviar(asunto, mensaje, usuario.email)

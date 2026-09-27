@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Postulante, Inscripcion, Documento
+from .models import Postulante, Inscripcion, Documento, TutorialInscripcion, RequisitoMatricula
 
 
 class DocumentoInline(admin.TabularInline):
@@ -24,3 +24,13 @@ class PostulanteAdmin(admin.ModelAdmin):
 
 admin.site.register(Postulante, PostulanteAdmin)
 admin.site.register(Inscripcion, InscripcionAdmin)
+
+
+@admin.register(RequisitoMatricula)
+class RequisitoMatriculaAdmin(admin.ModelAdmin):
+    list_display = ('orden', 'nombre')
+    list_editable = ('nombre',)
+    ordering = ('orden',)
+
+
+admin.site.register(TutorialInscripcion)

@@ -23,6 +23,10 @@
             data-confirmar-requerido-mensaje="Elige un proceso."
       y en el texto se puede usar {destino} para mostrar la opción elegida.
 
+   3b) Si un formulario tiene varios botones, cada botón puede llevar
+       sus propios data-confirmar-* (y formaction="..."); se usan los
+       del botón que se pulsó.
+
    4) Confirmar antes de seguir un enlace:
       <a href="..." data-confirmar-texto="¿Salir sin guardar?">Cancelar</a>
    ===================================================================== */
@@ -108,15 +112,17 @@
     document.addEventListener('submit', function (e) {
         var form = e.target;
         if (!(form instanceof HTMLFormElement)) return;
-        var d = form.dataset;
+        var boton = e.submitter || null;
+        // Si el botón que se pulsó trae sus propios data-confirmar-*, se usan
+        // esos (así un mismo formulario puede tener "Reintegrar" y "Eliminar").
+        var d = (boton && boton.dataset && boton.dataset.confirmarTitulo) ? boton.dataset : form.dataset;
         if (!d.confirmarTexto && !d.confirmarTextoPlantilla && !d.confirmarTitulo) return;
 
-        if (d.avisoConfirmado === '1') {       // ya se confirmó: dejar pasar
-            d.avisoConfirmado = '';
+        if (form.dataset.avisoConfirmado === '1') {       // ya se confirmó: dejar pasar
+            form.dataset.avisoConfirmado = '';
             return;
         }
         e.preventDefault();
-        var boton = e.submitter || null;
 
         // 1) Casillas obligatorias
         var n = '';
@@ -151,7 +157,7 @@
             peligro: d.confirmarPeligro === '1',
         }).then(function (ok) {
             if (!ok) return;
-            d.avisoConfirmado = '1';
+            form.dataset.avisoConfirmado = '1';
             if (form.requestSubmit) {
                 // se reenvía con el mismo botón (conserva name/value del botón)
                 boton && boton.form === form ? form.requestSubmit(boton) : form.requestSubmit();

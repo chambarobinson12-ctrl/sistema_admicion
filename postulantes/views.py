@@ -290,3 +290,59 @@ def eliminar_documento(request, inscripcion_id, tipo):
 def finalizar_proceso(request):
     messages.success(request, 'Tu proceso quedó guardado. Admisión lo revisará y te avisará si necesita algo más.')
     return redirect('inicio')
+
+def tutorial_matriculacion(request):
+    """Página del botón "Tutorial de matriculación" del menú de arriba.
+
+    - El postulante (y cualquier visitante) ve el video y la lista de
+      requisitos que debe llevar a Secretaría. No sube nada aquí.
+    - El administrador principal ve la misma página con un formulario para
+      cambiar el enlace del video y el nombre de cada requisito.
+    - El administrador secundario la ve igual que el postulante.
+    """
+    from panel.decorators import es_admin_principal
+    from .models import TutorialInscripcion, RequisitoMatricula
+
+    tutorial = TutorialInscripcion.obtener()
+    requisitos = list(RequisitoMatricula.objects.all())
+    puede_editar = es_admin_principal(request.user)
+
+    if request.method == 'POST':
+        if not puede_editar:
+            messages.warning(request, 'Solo el administrador principal puede cambiar el tutorial.')
+            return redirect('tutorial_matriculacion')
+
+        errores = []
+        video_url = request.POST.get('video_url', '').strip()
+        if video_url and not video_url.startswith(('http://', 'https://')):
+            errores.append('El enlace del video debe empezar con https://')
+        elif len(video_url) > 200:
+            errores.append('El enlace del video es demasiado largo.')
+
+        nuevos_nombres = {}
+        for requisito in requisitos:
+            nombre = request.POST.get(f'requisito_{requisito.pk}', '').strip()
+            if not nombre:
+                errores.append(f'El requisito {requisito.orden} no puede quedar vacío.')
+            elif len(nombre) > 200:
+                errores.append(f'El requisito {requisito.orden} es demasiado largo (máximo 200 letras).')
+            nuevos_nombres[requisito.pk] = nombre
+
+        if errores:
+            for error in errores:
+                messages.error(request, error)
+        else:
+            tutorial.video_url = video_url
+            tutorial.save(update_fields=['video_url', 'actualizado'])
+            for requisito in requisitos:
+                if requisito.nombre != nuevos_nombres[requisito.pk]:
+                    requisito.nombre = nuevos_nombres[requisito.pk]
+                    requisito.save(update_fields=['nombre'])
+            messages.success(request, 'Tutorial de matriculación actualizado.')
+            return redirect('tutorial_matriculacion')
+
+    return render(request, 'postulantes/tutorial_matriculacion.html', {
+        'tutorial': tutorial,
+        'requisitos': requisitos,
+        'puede_editar': puede_editar,
+    })

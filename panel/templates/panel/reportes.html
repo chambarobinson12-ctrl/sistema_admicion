@@ -56,5 +56,147 @@
         </div>
     </div>
 
-    <p class="campo-ayuda" style="margin-top:16px;">Para revisar a un postulante en particular, entra a "Postulantes" en el menú.</p>
+    {# ===== Historial de postulantes (para imprimir) ===== #}
+    <div class="tarjeta historial-imprimible" style="margin-top:20px;">
+        <div class="historial-cabecera no-imprimir">
+            <div>
+                <span class="tarjeta-titulo">Historial de postulantes</span>
+                <span class="campo-ayuda">Elige un proceso (anterior o actual) y una carrera, pulsa "Ver historial" y luego imprime o exporta a Excel.</span>
+            </div>
+            <div class="historial-acciones">
+                <button type="button" class="btn-sm btn" onclick="window.print()">🖨 Imprimir</button>
+                <a href="?historial_proceso={{ historial_proceso }}&historial_carrera={{ historial_carrera }}&exportar=excel" class="btn-sm btn-secundario" style="white-space:nowrap;">⬇ Exportar a Excel</a>
+            </div>
+        </div>
+
+        <form method="get" class="panel-filtros no-imprimir" style="margin:14px 0 18px;">
+            <select name="historial_proceso">
+                <option value="">Todos los procesos</option>
+                {% for conv in historial_convocatorias %}
+                    <option value="{{ conv.id }}" {% if historial_proceso == conv.id|stringformat:"s" %}selected{% endif %}>{{ conv.nombre }}{% if conv.activa %} (activo){% endif %}</option>
+                {% endfor %}
+            </select>
+            <select name="historial_carrera">
+                <option value="">Todas las carreras</option>
+                {% for car in historial_carreras %}
+                    <option value="{{ car.id }}" {% if historial_carrera == car.id|stringformat:"s" %}selected{% endif %}>{{ car.nombre }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn-sm btn-secundario">Ver historial</button>
+        </form>
+
+        {# Encabezado que solo aparece en la hoja impresa #}
+        <div class="solo-imprimir historial-encabezado-impreso">
+            <strong>Instituto Superior Tecnológico Amazónico · ISTAM</strong>
+            <span>Historial de postulantes</span>
+            <span>Proceso: {% if proceso_elegido %}{{ proceso_elegido.nombre }}{% else %}Todos los procesos{% endif %}
+                · Carrera: {% if carrera_elegida %}{{ carrera_elegida.nombre }}{% else %}Todas{% endif %}</span>
+            <span>Impreso el {{ fecha_impresion|date:"d/m/Y H:i" }}</span>
+        </div>
+
+        <div class="historial-tabla-wrap no-imprimir">
+            <table class="historial-tabla">
+                <thead>
+                    <tr>
+                        <th>N.°</th>
+                        <th>Postulante</th>
+                        <th>Cédula</th>
+                        <th>Contacto</th>
+                        <th>Carrera</th>
+                        <th>Proceso</th>
+                        <th>N.° postulación</th>
+                        <th>Fecha</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ins in historial_pagina %}
+                        <tr>
+                            <td>{{ forloop.counter0|add:historial_pagina.start_index }}</td>
+                            <td>{{ ins.postulante.apellidos }} {{ ins.postulante.nombres }}</td>
+                            <td>{{ ins.postulante.usuario.cedula }}</td>
+                            <td>{% if ins.postulante.usuario.telefono %}{{ ins.postulante.usuario.telefono }}{% elif ins.postulante.usuario.email %}{{ ins.postulante.usuario.email }}{% else %}—{% endif %}</td>
+                            <td>{{ ins.carrera.nombre }}</td>
+                            <td>{{ ins.convocatoria.nombre }}</td>
+                            <td class="nowrap">{{ ins.numero_postulacion }}</td>
+                            <td class="nowrap">{{ ins.fecha_inscripcion|date:"d/m/Y" }}</td>
+                            <td>{{ ins.get_estado_display }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="9" class="campo-ayuda" style="text-align:center; padding:18px;">No hay postulantes con esos filtros.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="no-imprimir">{% include 'panel/_paginacion.html' with pagina=historial_pagina nombre='postulantes' %}</div>
+
+        {# Al imprimir sale la lista completa, no solo la página que se ve #}
+        <div class="historial-tabla-wrap imprimir-completo">
+            <table class="historial-tabla">
+                <thead>
+                    <tr>
+                        <th>N.°</th>
+                        <th>Postulante</th>
+                        <th>Cédula</th>
+                        <th>Contacto</th>
+                        <th>Carrera</th>
+                        <th>Proceso</th>
+                        <th>N.° postulación</th>
+                        <th>Fecha</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ins in historial %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ ins.postulante.apellidos }} {{ ins.postulante.nombres }}</td>
+                            <td>{{ ins.postulante.usuario.cedula }}</td>
+                            <td>{% if ins.postulante.usuario.telefono %}{{ ins.postulante.usuario.telefono }}{% elif ins.postulante.usuario.email %}{{ ins.postulante.usuario.email }}{% else %}—{% endif %}</td>
+                            <td>{{ ins.carrera.nombre }}</td>
+                            <td>{{ ins.convocatoria.nombre }}</td>
+                            <td class="nowrap">{{ ins.numero_postulacion }}</td>
+                            <td class="nowrap">{{ ins.fecha_inscripcion|date:"d/m/Y" }}</td>
+                            <td>{{ ins.get_estado_display }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="9" class="campo-ayuda" style="text-align:center; padding:18px;">No hay postulantes con esos filtros.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="campo-ayuda" style="margin-top:10px;">Total: {{ historial|length }} postulante{{ historial|length|pluralize }}</p>
+    </div>
+
+    <p class="campo-ayuda no-imprimir" style="margin-top:16px;">Para revisar a un postulante en particular, entra a "Postulantes" en el menú.</p>
+
+    <style>
+        .historial-cabecera { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; }
+        .historial-cabecera .campo-ayuda { display:block; margin-top:4px; }
+        .historial-acciones { display:flex; gap:10px; flex-wrap:wrap; }
+        .historial-tabla-wrap { overflow-x:auto; }
+        .historial-tabla { width:100%; border-collapse:collapse; font-size:13.5px; }
+        .historial-tabla th { text-align:left; font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:#5b6b52; padding:10px 10px; border-bottom:1px solid #e6ebe0; background:#f7f9f4; white-space:nowrap; }
+        .historial-tabla td.nowrap { white-space:nowrap; }
+        .historial-tabla td { padding:10px; border-bottom:1px solid #eef1ea; }
+        .solo-imprimir { display:none; }
+        .imprimir-completo { display:none; }
+
+        @media print {
+            @page { size: A4 landscape; margin: 12mm; }
+            body, .panel-layout, .panel-main { background:#fff !important; }
+            .panel-layout { display:block !important; }
+            .panel-main { padding:0 !important; max-width:none !important; }
+            .panel-sidebar, .panel-topbar, .panel-dos-columnas, .mensaje, .no-imprimir,
+            .tarjeta:not(.historial-imprimible) { display:none !important; }
+            .historial-imprimible { box-shadow:none !important; border:none !important; padding:0 !important; margin:0 !important; }
+            .solo-imprimir { display:flex !important; }
+            .imprimir-completo { display:block !important; }
+            .historial-encabezado-impreso { flex-direction:column; gap:2px; margin-bottom:12px; font-size:12px; border-bottom:2px solid #2f6b1f; padding-bottom:8px; }
+            .historial-encabezado-impreso strong { font-size:15px; }
+            .historial-tabla { font-size:11px; }
+            .historial-tabla th { background:#eef3e8 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+            .historial-tabla tr { page-break-inside:avoid; }
+        }
+    </style>
 {% endblock %}

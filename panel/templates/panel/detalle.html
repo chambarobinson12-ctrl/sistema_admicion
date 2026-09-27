@@ -173,32 +173,113 @@
         </div>
     </div>
 
-    {% if docs_anteriores %}
-        <div class="tarjeta">
-            <span class="tarjeta-titulo">Documentos anteriores</span>
-            <p class="campo-ayuda" style="margin:0 0 10px;">Documentos que el postulante subió cuando se pedían otros requisitos. Se conservan para consulta.</p>
-            <div style="display:flex; flex-wrap:wrap; gap:14px;">
-                {% for doc in docs_anteriores %}
-                    <span class="doc-meta">{% include 'panel/_boton_doc.html' with doc=doc etiqueta=doc.get_tipo_display inscripcion=inscripcion clase='link-ver-doc' texto=doc.get_tipo_display %}</span>
-                {% endfor %}
-            </div>
-        </div>
-    {% endif %}
 
-    <div class="panel-accion-final">
-        <p>Todos los documentos deben estar validados para aprobar la postulación completa.</p>
-        <form method="post" action="{% url 'panel:decidir_inscripcion' inscripcion.id %}" class="acciones">
-            {% csrf_token %}
-            {% if inscripcion.estado != 'aprobada' and inscripcion.estado != 'rechazada' %}
-                <button type="submit" name="accion" value="rechazar" class="btn-secundario">Rechazar postulación</button>
-                <button type="submit" name="accion" value="aprobar" {% if not todos_validados %}disabled{% endif %}>Aprobar postulación completa</button>
+    {# ---------- Decisión sobre el proceso completo ---------- #}
+    <div class="panel-accion-final decision-barra">
+        <div class="decision-texto">
+            {% if inscripcion.estado == 'aprobada' %}
+                <span class="badge badge-exito decision-badge">✓ Proceso validado</span>
+                <p>Los 5 documentos están validados y el proceso fue aprobado.</p>
+            {% elif inscripcion.estado == 'rechazada' %}
+                <span class="badge badge-peligro decision-badge">✕ Postulación rechazada</span>
+                <p>Si quieres darle otra oportunidad, pídele que vuelva a subir los documentos.</p>
+            {% elif todos_validados %}
+                <p><strong>Los 5 documentos están validados.</strong> Ya puedes validar el proceso completo.</p>
             {% else %}
-                <span class="badge {% if inscripcion.estado == 'aprobada' %}badge-exito{% else %}badge-peligro{% endif %}">
-                    Postulación {{ inscripcion.get_estado_display|lower }}
-                </span>
-                <a href="{% url 'panel:estados_postulantes' %}?q={{ inscripcion.numero_postulacion }}&proceso={{ inscripcion.convocatoria_id }}" class="btn-sm btn-secundario">Revisar y comentar</a>
+                <p>Valida los 5 documentos para poder validar el proceso. Si alguno está mal, rechaza el proceso y pídele que lo vuelva a subir.</p>
             {% endif %}
-        </form>
+        </div>
+        <div class="decision-botones">
+            <a href="{% url 'panel:estados_postulantes' %}?q={{ inscripcion.numero_postulacion }}&proceso={{ inscripcion.convocatoria_id }}" class="btn-sm btn-secundario">💬 Revisar y comentar</a>
+            {% if inscripcion.estado == 'rechazada' %}
+                <button type="button" class="btn-sm btn-secundario" data-abrir-decision="devolver">↺ Permitir corregir</button>
+            {% elif inscripcion.estado != 'aprobada' %}
+                <button type="button" class="btn-sm btn-peligro-outline" data-abrir-decision="devolver">✕ Rechazar proceso</button>
+                <form method="post" action="{% url 'panel:decidir_inscripcion' inscripcion.id %}" style="margin:0;"
+                      data-confirmar-titulo="¿Validar el proceso?"
+                      data-confirmar-texto="Se aprobará el proceso de {{ inscripcion.postulante.nombre_completo }} y se le avisará por correo."
+                      data-confirmar-boton="Sí, validar">
+                    {% csrf_token %}
+                    <button type="submit" name="accion" value="aprobar" class="btn-sm btn-exito decision-validar" {% if not todos_validados %}disabled title="Primero valida los 5 documentos"{% endif %}>✓ Validar proceso</button>
+                </form>
+            {% endif %}
+        </div>
     </div>
+
+    {% if inscripcion.estado != 'aprobada' %}
+    {# ---------- Ventana: rechazar proceso / pedir corrección ---------- #}
+    <dialog class="decision-dialogo" id="dialogo-decision">
+        <form method="post" action="{% url 'panel:decidir_inscripcion' inscripcion.id %}" id="form-decision">
+            {% csrf_token %}
+            <div class="decision-dialogo-cab">
+                <h3>{% if inscripcion.estado == 'rechazada' %}Permitir que corrija{% else %}Rechazar proceso{% endif %}</h3>
+                <button type="button" class="decision-cerrar" data-cerrar-decision aria-label="Cerrar">×</button>
+            </div>
+            <p class="campo-ayuda" style="margin:0 0 14px;">{{ inscripcion.postulante.nombre_completo }} · {{ inscripcion.numero_postulacion }}</p>
+
+            <div class="decision-opciones">
+                <label class="decision-opcion">
+                    <input type="radio" name="accion" value="devolver" checked>
+                    <span><strong>Pedir que vuelva a subir documentos</strong>
+                    <small>Los documentos que marques quedan rechazados y el postulante los podrá subir de nuevo. Cuando los suba, los validas y luego pulsas "Validar proceso".</small></span>
+                </label>
+                {% if inscripcion.estado != 'rechazada' %}
+                <label class="decision-opcion peligro">
+                    <input type="radio" name="accion" value="rechazar">
+                    <span><strong>Rechazar definitivamente</strong>
+                    <small>El postulante ya no podrá continuar en este proceso.</small></span>
+                </label>
+                {% endif %}
+            </div>
+
+            <div id="bloque-documentos">
+                <span class="decision-label">¿Qué documentos debe volver a subir?</span>
+                <div class="decision-docs">
+                    {% for item in docs_detalle %}
+                        <label class="decision-doc">
+                            <input type="checkbox" name="documentos" value="{{ item.tipo }}" {% if item.documento and item.documento.estado == 'rechazado' %}checked{% endif %}>
+                            <span>{{ forloop.counter }}. {{ item.etiqueta }}</span>
+                            <em>{% if not item.documento %}sin subir{% elif item.documento.estado == 'validado' %}validado{% elif item.documento.estado == 'rechazado' %}rechazado{% else %}pendiente{% endif %}</em>
+                        </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <label class="decision-label" for="decision-motivo">Motivo (lo recibirá por correo)</label>
+            <textarea name="motivo" id="decision-motivo" rows="3" maxlength="800" required
+                      placeholder="Ej.: El certificado de inscripción no es legible y la nota de evaluación no corresponde a este proceso."></textarea>
+
+            <div class="decision-dialogo-pie">
+                <button type="button" class="btn-sm btn-secundario" data-cerrar-decision>Cancelar</button>
+                <button type="submit" class="btn-sm btn-peligro" id="decision-enviar">Enviar al postulante</button>
+            </div>
+        </form>
+    </dialog>
+    <script>
+        (function () {
+            const dialogo = document.getElementById('dialogo-decision');
+            const form = document.getElementById('form-decision');
+            if (!dialogo || !form) return;
+            const bloqueDocs = document.getElementById('bloque-documentos');
+            const enviar = document.getElementById('decision-enviar');
+            document.querySelectorAll('[data-abrir-decision]').forEach(b => b.addEventListener('click', () => dialogo.showModal()));
+            dialogo.querySelectorAll('[data-cerrar-decision]').forEach(b => b.addEventListener('click', () => dialogo.close()));
+            function modo() {
+                const devolver = form.querySelector('input[name=accion]:checked').value === 'devolver';
+                bloqueDocs.style.display = devolver ? '' : 'none';
+                enviar.textContent = devolver ? '↺ Pedir corrección' : '✕ Rechazar definitivamente';
+            }
+            form.querySelectorAll('input[name=accion]').forEach(r => r.addEventListener('change', modo));
+            form.addEventListener('submit', (e) => {
+                const devolver = form.querySelector('input[name=accion]:checked').value === 'devolver';
+                if (devolver && !form.querySelector('input[name=documentos]:checked')) {
+                    e.preventDefault();
+                    (window.avisar || alert)('Marca al menos un documento que debe volver a subir.', 'warning');
+                }
+            });
+            modo();
+        })();
+    </script>
+    {% endif %}
     {% include 'panel/_visor_documentos.html' %}
 {% endblock %}

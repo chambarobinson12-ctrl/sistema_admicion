@@ -10,5 +10,6 @@ urlpatterns = [
     path('inscripcion/<int:inscripcion_id>/datos/', views.editar_datos, name='editar_datos'),
     path('inscripcion/<int:inscripcion_id>/paso/<str:tipo>/marcar/', views.marcar_paso, name='marcar_paso'),
     path('inscripcion/<int:inscripcion_id>/documento/<str:tipo>/eliminar/', views.eliminar_documento, name='eliminar_documento'),
+    path('tutorial-matriculacion/', views.tutorial_matriculacion, name='tutorial_matriculacion'),
     path('finalizar/', views.finalizar_proceso, name='finalizar_proceso'),
 ]
