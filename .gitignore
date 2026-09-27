@@ -10,3 +10,6 @@ media/
 
 # Respaldos temporales
 RESPALDO_*.txt
+
+# Presentación y documentos de la tesis (solo en esta computadora)
+_tesis/
